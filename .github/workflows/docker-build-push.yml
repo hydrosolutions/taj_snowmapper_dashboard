@@ -1,0 +1,41 @@
+name: Build and Deploy Snowmapper Tajikistan
+
+env:
+  IMAGE_NAME: mabesa/snowmapper-tajikistan
+  IMAGE_TAG: latest
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    name: Build and push Snowmapper Tajikistan image
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Log in to DockerHub
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build and push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max

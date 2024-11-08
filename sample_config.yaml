@@ -1,0 +1,16 @@
+# Cache settings
+cache_directory: "data/cache"
+cache_max_age_hours: 24
+max_cache_size_mb: 1000  # 1GB max cache size
+
+# SSH connection settings
+ssh:
+  hostname: "your-aws-server"
+  username: "your-username"
+  key_path: "/path/to/your/key.pem"
+  remote_path: "/remote/path/to/data"
+
+# Logging settings
+logging:
+  level: "INFO"
+  file: "data_manager.log"

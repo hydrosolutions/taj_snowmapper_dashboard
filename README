@@ -1,0 +1,4 @@
+## Snowmapper Tajikistan
+This repository contains the code for the snowmapper tajikistan dashboard. The dashboard is a web application that displays snow cover data for Tajikistan. The data is sourced from the an operational implementation of [TopoPyScale](https://github.com/ArcticSnow/TopoPyScale) and the [FSM](https://github.com/RichardEssery/FSM) model and is updated daily.
+
+## Deployment instructions

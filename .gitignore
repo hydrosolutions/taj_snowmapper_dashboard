@@ -1,0 +1,20 @@
+# Ignore pycache and cpy
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtualenv
+venv/
+
+# Ignore IDE files
+.idea/
+.vscode/
+.DS_Store
+
+# Ignore configuration files
+.env
+config.yaml
+
+# Ignore data folder
+data/
