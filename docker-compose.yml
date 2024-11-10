@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: snowmapper-dashboard:latest
+    container_name: snowmapper-dashboard
+    ports:
+      - "${PORT:-5006}:5006"
+    volumes:
+      - snow_data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DASHBOARD_ENV=aws
+      - AWS_REGION=${AWS_REGION}
+      - AWS_BUCKET=${AWS_BUCKET}
+      - AWS_PREFIX=${AWS_PREFIX}
+      - CACHE_AGE_HOURS=${CACHE_AGE_HOURS:-24}
+      - MAX_CACHE_SIZE_MB=${MAX_CACHE_SIZE_MB:-1000}
+      - PORT=5006
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5006/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  snow_data:
+    name: snowmapper_data
+
+networks:
+  default:
+    name: snowmapper_network

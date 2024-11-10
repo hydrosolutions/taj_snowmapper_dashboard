@@ -1,4 +1,13 @@
 ## Snowmapper Tajikistan
 This repository contains the code for the snowmapper tajikistan dashboard. The dashboard is a web application that displays snow cover data for Tajikistan. The data is sourced from the an operational implementation of [TopoPyScale](https://github.com/ArcticSnow/TopoPyScale) and the [FSM](https://github.com/RichardEssery/FSM) model and is updated daily.
 
+## Architecture
+This project comes in 2 components: A data processor and a web interface. The data processor is a python script that downloads the latest snow data from the TopoPyScale and FSM model and stores it in local files optimized for display. The web interface is a web application that displays the snow-related data on a map. Both components are run in a docker container.
+
+### Data Processor
+The data processor is a python script that downloads the latest snow data from the TopoPyScale and FSM model and stores it in local files optimized for display. The data processor is run as a cron job that runs every day at 00:00 UTC. It further removes the old data and keeps only the latest data on the server. Data processing can take several minutes to hours, requires a stable internet connection, and a server with sufficient memory resources (we recommend at least 8 GB RAM).
+
+### Web Interface
+The web interface is a web application that displays the snow-related data on a map. The web interface is built using the Holoviews and Bokeh libraries and the panel dashboard library. It is run as a web server that serves the web application. The web interface is run as a docker container that is started when the server is started.
+
 ## Deployment instructions

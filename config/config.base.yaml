@@ -1,0 +1,73 @@
+# Base configuration shared between environments
+
+# -- Data processor -- #
+# General settings
+retention_days: 3
+cache:
+  max_age_hours: 72
+  max_size_mb: 1000
+
+projections:
+  input: "EPSG:4326"    # WGS84
+  output: "EPSG:3857"   # Web Mercator
+  bounds:
+    # Original WGS84 bounds
+    wgs84:
+      min_lat: 36.5
+      max_lat: 41.5
+      min_lon: 67.0
+      max_lon: 75.0
+    # Web Mercator bounds (easting/northing in meters)
+    web_mercator:
+      min_x: 7457442
+      max_x: 8348783
+      min_y: 4378132
+      max_y: 5071560
+
+variables:
+  - hs
+  - swe
+  - rof
+
+# -- Dashboard -- #
+# Map settings
+map:
+  center_lat: 38.861034
+  center_lon: 71.276093
+  min_zoom: 6
+  max_zoom: 12
+  initial_zoom: 7
+
+# Data variables configuration
+variables:
+  hs:
+    name: "snow_height"
+    file_prefix: "HS"
+    widget_short_name: "HS"
+    units: "m"
+    colormap: "viridis"
+    min_value: 0
+    max_value: 7
+  swe:
+    name: "snow_water_equivalent"
+    file_prefix: "SWE"
+    widget_short_name: "SWE"
+    units: "mm"
+    colormap: "Blues"
+    min_value: 0
+    max_value: 4000
+  rof:
+    name: "runoff"
+    file_prefix: "ROF"
+    widget_short_name: "SM"
+    units: "mm"
+    colormap: "YlOrRd"
+    min_value: 0
+    max_value: 10
+
+# Dashboard settings
+dashboard:
+  update_interval: 300  # seconds
+  default_language: "en"
+  default_opacity: 0.7
+  tile_provider: "OpenStreetMap"

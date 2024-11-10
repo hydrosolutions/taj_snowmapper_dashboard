@@ -12,9 +12,10 @@ venv/
 .vscode/
 .DS_Store
 
-# Ignore configuration files
+# Ignore configuration files, keys and secrets
 .env
-config.yaml
+*.pem
 
 # Ignore data folder
 data/
+*.log

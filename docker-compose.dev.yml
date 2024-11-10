@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: snowmapper-dashboard:dev
+    container_name: snowmapper-dashboard-dev
+    ports:
+      - "${PORT:-5006}:5006"
+    volumes:
+      - ./app:/app/app  # Mount source code for development
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DASHBOARD_ENV=local
+      - SSH_HOST=${SSH_HOST}
+      - SSH_USER=${SSH_USER}
+      - SSH_KEY_PATH=${SSH_KEY_PATH}
+      - REMOTE_PATH=${REMOTE_PATH}
+      - PORT=5006
+    healthcheck:
+      disable: true
+    command: ["panel", "serve", "snowmapper.py", "--autoreload", "--show"]
