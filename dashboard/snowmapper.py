@@ -1,3 +1,15 @@
+# Description: Dashboard for visualizing snow data in Tajikistan.
+#
+# This script creates a dashboard for visualizing snow data in Tajikistan.
+#
+# Useage:
+# To run the dashboard loaclly, run the following command from the dashboard
+# directory:
+# panel serve --show snowmapper.py --autoreload
+# This will open a new browser window with the dashboard.
+#
+# Author: Beatrice Marti, hydrosolutions GmbH
+
 import os
 import sys
 from pathlib import Path
@@ -60,10 +72,11 @@ class SnowMapViewer:
 
     # Define available tile sources
     TILE_SOURCES = {
-        'OpenStreetMap': gv.tile_sources.OSM,
+        'CartoDB Positron': gv.tile_sources.CartoLight,
+        #'OpenStreetMap': gv.tile_sources.OSM,
         'Stamen Terrain': gv.tile_sources.StamenTerrain,
         'Satellite': gv.tile_sources.EsriImagery,
-        'CartoDB Positron': gv.tile_sources.CartoLight
+
     }
 
     def __init__(self, data_dir: Path, config: dict):
@@ -143,7 +156,7 @@ class SnowMapViewer:
             self.logger.error(f"Error getting times for {var_name}: {e}")
             return []
 
-    def create_base_map(self, basemap: str = 'OpenStreetMap') -> gv.Image:
+    def create_base_map(self, basemap: str = 'CartoDB Positron') -> gv.Image:
         """Create just the base map without variable overlay."""
         try:
             # Get the appropriate tile source
@@ -152,12 +165,17 @@ class SnowMapViewer:
 
             # Set map bounds from config
             return tiles.opts(
-                width=800,
-                height=600,
+                hooks=[remove_bokeh_logo],
+                width=1200,  # Allow width to adjust to container
+                height=800,  # Allow height to adjust to container
+                xaxis=None,  # Remove x axis
+                yaxis=None,  # Remove y axis
+                active_tools=['pan', 'wheel_zoom'],
+                scalebar=True,  # Add scale bar
                 xlim=(self.bounds['min_x'], self.bounds['max_x']),
                 ylim=(self.bounds['min_y'], self.bounds['max_y']),
                 projection=crs.GOOGLE_MERCATOR,
-                hooks=[remove_bokeh_logo]
+                aspect='equal',
             )
 
         except Exception as e:
@@ -166,7 +184,7 @@ class SnowMapViewer:
             return gv.Text(0, 0, f"Error: {str(e)}")
 
     def create_map(self, var_name: str, time_idx: datetime, data_type: str = 'forecast',
-                  basemap: str = 'OpenStreetMap', opacity: float = 0.7) -> gv.Image:
+                  basemap: str = 'CartoDB Positron', opacity: float = 0.7) -> gv.Image:
         """Create a map visualization with variable overlay."""
         try:
             # Get base map first
@@ -191,6 +209,33 @@ class SnowMapViewer:
             # Make zeros transparent
             data = data.where(data != 0)
 
+            # Create contour levels
+            min_val = var_config['min_value']
+            max_val = var_config['max_value']
+            # Get minimum and maximum values from data
+            min_val = data.min().values.item() if np.isfinite(min_val) else var_config['min_value']
+            max_val = data.max().values.item() if np.isfinite(max_val) else var_config['max_value']
+            n_levels = 10  # Adjust number of contour levels as needed
+            levels = np.linspace(min_val, max_val, n_levels)
+            self.logger.debug(f"levels for contours: {levels}")
+
+            # Create filled contours (optional)
+            filled_contours = hv.QuadMesh((data.lon, data.lat, data)).opts(
+                colorbar=True,
+                cmap=var_config['colormap'],
+                clim=(min_val, max_val),
+                alpha=opacity * 0.5,  # Reduce opacity for filled contours
+                tools=['hover']
+            )
+
+            # Create contour lines
+            contours = hv.operation.contours(hv.QuadMesh((data.lon, data.lat, data)), levels=levels).opts(
+                line_color='black',
+                line_width=1,
+                alpha=opacity,
+                tools=['hover']
+            )
+
             # Create the raster layer with user-defined opacity
             raster = gv.Image(
                 data,
@@ -208,7 +253,19 @@ class SnowMapViewer:
             )
 
             # Combine base map with raster
-            return (map_view * raster).opts(hooks=[remove_bokeh_logo])
+            return (map_view * raster).opts(
+                hooks=[remove_bokeh_logo],
+                width=1200,  # Allow width to adjust to container
+                height=800,  # Allow height to adjust to container
+                xaxis=None,  # Remove x axis
+                yaxis=None,  # Remove y axis
+                active_tools=['pan', 'wheel_zoom'],
+                scalebar=True,  # Add scale bar
+                xlim=(self.bounds['min_x'], self.bounds['max_x']),
+                ylim=(self.bounds['min_y'], self.bounds['max_y']),
+                projection=crs.GOOGLE_MERCATOR,
+                aspect='equal',
+            )
 
         except Exception as e:
             self.logger.error(f"Error creating map: {e}")
@@ -220,8 +277,8 @@ class SnowMapDashboard(param.Parameterized):
     variable = param.Selector()
     data_type = param.Selector(objects=['forecast', 'accumulated', 'historical'])
     time_offset = param.Integer(default=0, bounds=(-3, 5))  # Slider for relative days
-    basemap = param.Selector(default='OpenStreetMap', objects=[
-        'OpenStreetMap',
+    basemap = param.Selector(default='CartoDB Positron', objects=[
+        #'OpenStreetMap',
         'Stamen Terrain',
         'Satellite',
         'CartoDB Positron'
@@ -240,7 +297,7 @@ class SnowMapDashboard(param.Parameterized):
         # Set up variable selector with None option
         variables = ['None'] + list(config['variables'].keys())
         self.param.variable.objects = variables
-        params['variable'] = variables[0]  # Start with 'None' selected
+        params['variable'] = variables[1]  # Start with 'None' selected
 
         super().__init__(**params)
 
@@ -354,7 +411,7 @@ time_slider = pn.widgets.IntSlider(
 basemap_selector = pn.widgets.RadioButtonGroup(
     name='Base Map',
     options=list(SnowMapViewer.TILE_SOURCES.keys()),
-    value='OpenStreetMap'
+    value='CartoDB Positron'
 )
 
 opacity_slider = pn.widgets.FloatSlider(
@@ -393,9 +450,6 @@ def get_control_panel(variable):
 # Create the dashboard layout with dynamic controls
 controls = pn.bind(get_control_panel, dashboard.param.variable)
 
-print("DEBUG: current directory: ", os.getcwd())
-print("DEBUG: logo path", config['paths']['favicon_path'])
-
 # Initialize template
 template = pn.template.BootstrapTemplate(
     title="Snow Situation Tajikistan",
@@ -410,11 +464,41 @@ template.sidebar.append(
     controls,
 )
 
+# Add custom CSS for maximizing map space
+template.config.raw_css.append("""
+.bk-root {
+    width: 100%;
+    height: 100%;
+}
+
+.main-content {
+    height: calc(100vh - 50px);
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex;
+    flex-direction: column;
+}
+
+.bk-root .bk {
+    flex-grow: 1;
+}
+""")
+
+# Create map pane to handle map sizing
+map_pane = pn.pane.HoloViews(
+    dashboard.view,
+    sizing_mode='stretch_both',
+    min_height=300,
+)
+
 # Add main view to the main area
 template.main.append(
     pn.Column(
-        dashboard.view,
-        sizing_mode='stretch_both'
+        map_pane,
+        sizing_mode='stretch_both',
+        margin=10,
+        css_classes=['main-content']
     )
 )
 

@@ -20,7 +20,7 @@ projections:
     # Web Mercator bounds (easting/northing in meters)
     web_mercator:
       min_x: 7457442
-      max_x: 8348783
+      max_x: 8388783
       min_y: 4378132
       max_y: 5071560
 
@@ -45,9 +45,9 @@ variables:
     file_prefix: "HS"
     widget_short_name: "HS"
     units: "m"
-    colormap: "viridis"
+    colormap: "viridis_r"
     min_value: 0
-    max_value: 7
+    max_value: 0.8
   swe:
     name: "snow_water_equivalent"
     file_prefix: "SWE"
@@ -55,7 +55,7 @@ variables:
     units: "mm"
     colormap: "Blues"
     min_value: 0
-    max_value: 4000
+    max_value: 200
   rof:
     name: "runoff"
     file_prefix: "ROF"
@@ -63,7 +63,7 @@ variables:
     units: "mm"
     colormap: "YlOrRd"
     min_value: 0
-    max_value: 10
+    max_value: 4
 
 # Dashboard settings
 dashboard:
