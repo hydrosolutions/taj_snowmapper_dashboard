@@ -44,6 +44,7 @@ map:
 variables:
   hs:
     name: "snow_height"
+    figure_title: "Snow Height"
     file_prefix: "HS"
     widget_short_name: "HS"
     units: "m"
@@ -53,6 +54,7 @@ variables:
     max_value: 10
   swe:
     name: "snow_water_equivalent"
+    figure_title: "Snow Water Equivalent"
     file_prefix: "SWE"
     widget_short_name: "SWE"
     units: "mm"
@@ -61,6 +63,7 @@ variables:
     max_value: 200
   rof:
     name: "runoff"
+    figure_title: "Snowmelt"
     file_prefix: "ROF"
     widget_short_name: "SM"
     units: "mm"

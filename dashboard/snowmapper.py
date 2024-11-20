@@ -258,7 +258,7 @@ class SnowMapViewer:
                 alpha=opacity,
                 data_aspect=1,
                 show_grid=False,
-                title=f"{var_config['name']} ({var_config['units']}) - {pd.to_datetime(time_idx).strftime('%Y-%m-%d')}"
+                title=f"{var_config['figure_title']} ({var_config['units']}) - {pd.to_datetime(time_idx).strftime('%Y-%m-%d')}"
             )
 
             # Combine base map with raster
