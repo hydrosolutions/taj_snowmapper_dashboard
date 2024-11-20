@@ -33,6 +33,7 @@ from typing import Optional
 
 from utils.logging import LoggerSetup
 from utils.config import ConfigLoader
+from utils.data_warning import DataFreshnessManager
 
 # Initialize extensions
 pn.extension('tabulator')
@@ -59,6 +60,14 @@ config = config_loader.load_config('local')
 # Setup logging
 logger_setup = LoggerSetup(config)
 logger = logger_setup.setup()
+
+# Color settings
+# Set color map for filled contours
+# Inspired by https://whiterisk.ch/de/conditions/snow-maps/new_snow
+MAP_COLORS_NEW_SNOW = ['#cdffcd', '#99f0b2', '#53bd9f', '#3296b4', '#0670b0', '#054f8c', '#610432', '#4d020f']
+MAP_COLOR_SCALE_NEW_SNOW = [0.1, 10.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0]  # in cm
+MAP_COLOR_SCALE_HS = [0.1, 20.0, 50.0, 80.0, 120.0, 200.0, 300.0, 400.0]  # in cm
+
 
 
 # Add this before creating your template
@@ -276,7 +285,7 @@ class SnowMapViewer:
 class SnowMapDashboard(param.Parameterized):
     variable = param.Selector()
     data_type = param.Selector(objects=['forecast', 'accumulated', 'historical'])
-    time_offset = param.Integer(default=0, bounds=(-3, 5))  # Slider for relative days
+    time_offset = param.Integer(default=0, bounds=(config['dashboard']['day_slider_min'], config['dashboard']['day_slider_max']))  # Slider for relative days
     basemap = param.Selector(default='CartoDB Positron', objects=[
         #'OpenStreetMap',
         'Stamen Terrain',
@@ -293,6 +302,9 @@ class SnowMapDashboard(param.Parameterized):
     def __init__(self, data_dir: Path, config: dict, **params):
         self.config = config
         self.logger = logging.getLogger('snowmapper.dashboard')
+
+        # Initialize data freshness manager
+        self.data_freshness_manager = DataFreshnessManager()
 
         # Set up variable selector with None option
         variables = ['None'] + list(config['variables'].keys())
@@ -313,6 +325,7 @@ class SnowMapDashboard(param.Parameterized):
         # Initialize time handling
         self.reference_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         self._update_time_bounds()
+        #self.data_freshness_manager.update_warning_visibility(self.param.time_offset.bounds, self.config)
 
     def _update_time_bounds(self):
         """Update time slider bounds based on data availability."""
@@ -332,9 +345,30 @@ class SnowMapDashboard(param.Parameterized):
         # Calculate relative days from reference date
         days_available = [(t - self.reference_date).days for t in times]
 
+        # Store the time bounds
+        self.time_bounds = [days_available[0], days_available[-1]]
+
+        # Always update warning visibility with the current bounds
+        self.logger.debug(f"Current time bounds: {self.time_bounds}")
+        self.logger.debug(f"Reference date: {self.reference_date}")
+        self.logger.debug(f"Days available: {days_available}")
+
+        self.data_freshness_manager.update_warning_visibility(
+            self.time_bounds,
+            self.config
+        )
+
+        # If there is no overlap of days available with the slider bounds,
+        # it means we have no data for the current time offset.
+        # In this case, we can't display a map.
+        if not any([self.time_offset in range(min(days_available), max(days_available))]):
+            self.data_freshness_manager.set_warning_visibility(True)
+            self.time_offset = 0
+            return
+
         if days_available:
-            min_days = max(-3, min(days_available))
-            max_days = min(5, max(days_available))
+            min_days = max(self.config['dashboard']['day_slider_min'], min(days_available))
+            max_days = min(self.config['dashboard']['day_slider_max'], max(days_available))
 
             # Update slider bounds
             self.param.time_offset.bounds = (min_days, max_days)
@@ -495,6 +529,7 @@ map_pane = pn.pane.HoloViews(
 # Add main view to the main area
 template.main.append(
     pn.Column(
+        dashboard.data_freshness_manager.get_warning_component(),
         map_pane,
         sizing_mode='stretch_both',
         margin=10,

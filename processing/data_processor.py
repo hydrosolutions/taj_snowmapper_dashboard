@@ -1,3 +1,21 @@
+# Data processing pipeline for snow data
+#
+# This script processes snow data files by transforming coordinates from
+# EPSG:4326 to EPSG:3857, creating forecast and accumulated variables, and
+# saving the processed data in Zarr format.
+#
+# The pipeline is designed to be run as an async function to allow for parallel
+# processing of multiple variables.
+#
+# Useage:
+# Requires pem file to access the snow data server. The path to the pem file
+# should be set in the .env file as SSH_KEY_PATH. The root to SSH_KEY_PATH is
+# the processing directory.
+# To run locally, use the following command from the processing directory:
+# python data_processor.py
+#
+# Author: Beatrice Marti, hydrosolutions GmbH
+
 import os
 import sys
 from pathlib import Path
@@ -142,55 +160,164 @@ class SnowDataPipeline:
 
         return mask
 
+    '''
     def _process_single_file(self, ds: xr.Dataset, var_name: str) -> xr.Dataset:
-        """Process a single dataset."""
+        """
+        Process a single dataset by transforming coordinates from EPSG:4326 to EPSG:3857.
+
+        Args:
+            ds (xr.Dataset): Input dataset containing the variable to process (in EPSG:4326)
+            var_name (str): Name of the variable being processed
+
+        Returns:
+            xr.Dataset: Dataset with transformed coordinates (in EPSG:3857)
+        """
         try:
-            # Create mask using WGS84 bounds
-            mask = self.create_mask_array(ds)
+            # Create a copy of the dataset to avoid modifying the original
+            processed_ds = ds.copy()
 
-            # Apply mask - replace values outside Tajikistan with NaN
-            for var in ds.data_vars:
-                if var != 'crs':  # Skip the CRS variable
-                    ds[var] = ds[var].where(mask)
-
-            # Clip to bounds using WGS84 coordinates
-            ds = ds.sel(
-                lon=slice(self.bounds_wgs84['min_lon'], self.bounds_wgs84['max_lon']),
-                lat=slice(self.bounds_wgs84['min_lat'], self.bounds_wgs84['max_lat'])
+            # Create transformer for EPSG:4326 (WGS 84) to EPSG:3857 (Web Mercator)
+            transformer = pyproj.Transformer.from_crs(
+                "EPSG:4326",
+                "EPSG:3857",
+                always_xy=True
             )
 
-            # Transform coordinates to Web Mercator
+            # Get original coordinates
             lons, lats = np.meshgrid(ds.lon.values, ds.lat.values)
-            x_web, y_web = self.transformer.transform(lons, lats)
 
-            # Add Web Mercator coordinates
-            ds = ds.assign_coords({
-                'x': ('lon', x_web[0, :]),
-                'y': ('lat', y_web[:, 0])
+            # Transform coordinates
+            x_web, y_web = transformer.transform(lons, lats)
+
+            # Create new coordinates
+            processed_ds = processed_ds.assign_coords({
+                "x": (("lon"), x_web[0, :]),  # Use first row for x coordinates
+                "y": (("lat"), y_web[:, 0])   # Use first column for y coordinates
             })
 
-            # Add projection information
-            ds.attrs['crs_wgs84'] = self.config['projections']['input']
-            ds.attrs['crs_webmerc'] = self.config['projections']['output']
-            ds.attrs['bounds_wgs84'] = str(self.bounds_wgs84)
-            ds.attrs['bounds_webmerc'] = str(self.bounds_webmerc)
-
-            # Add coordinate metadata
-            ds['x'].attrs.update({
-                'units': 'meters',
-                'standard_name': 'projection_x_coordinate',
-                'crs': self.config['projections']['output']
-            })
-            ds['y'].attrs.update({
-                'units': 'meters',
-                'standard_name': 'projection_y_coordinate',
-                'crs': self.config['projections']['output']
+            # Add metadata about the transformation
+            processed_ds.attrs.update({
+                'original_crs': 'EPSG:4326',
+                'transformed_crs': 'EPSG:3857',
+                'processing_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
 
-            return ds
+            # Log the transformation
+            self.logger.info(f"Transformed coordinates for {var_name} from EPSG:4326 to EPSG:3857")
+            self.logger.debug(f"X range: {x_web.min():.2f} to {x_web.max():.2f}")
+            self.logger.debug(f"Y range: {y_web.min():.2f} to {y_web.max():.2f}")
+
+            return processed_ds
 
         except Exception as e:
-            self.logger.error(f"Error processing file: {e}")
+            self.logger.error(f"Error in _process_single_file: {str(e)}")
+            raise
+    '''
+
+    def _process_single_file(self, ds: xr.Dataset, var_name: str) -> xr.Dataset:
+        """
+        Process a single dataset by:
+        1. Transforming coordinates from EPSG:4326 to EPSG:3857
+        2. Clipping to Tajikistan boundary from GeoJSON
+
+        Args:
+            ds (xr.Dataset): Input dataset containing the variable to process (in EPSG:4326)
+            var_name (str): Name of the variable being processed
+
+        Returns:
+            xr.Dataset: Dataset with transformed coordinates and clipped to boundary
+        """
+        try:
+            # Create a copy of the dataset to avoid modifying the original
+            processed_ds = ds.copy()
+
+            # Create transformer for EPSG:4326 (WGS 84) to EPSG:3857 (Web Mercator)
+            transformer = pyproj.Transformer.from_crs(
+                "EPSG:4326",
+                "EPSG:3857",
+                always_xy=True
+            )
+
+            # Get original coordinates
+            lons, lats = np.meshgrid(ds.lon.values, ds.lat.values)
+
+            # Transform coordinates
+            x_web, y_web = transformer.transform(lons, lats)
+
+            # Create new coordinates
+            processed_ds = processed_ds.assign_coords({
+                "x": (("lon"), x_web[0, :]),  # Use first row for x coordinates
+                "y": (("lat"), y_web[:, 0])   # Use first column for y coordinates
+            })
+
+            # Calculate the resolution of the data
+            lon_res = np.abs(ds.lon.values[1] - ds.lon.values[0])
+            lat_res = np.abs(ds.lat.values[1] - ds.lat.values[0])
+
+            # Create transform for the rasterization
+            from affine import Affine
+            transform = Affine.translation(lons.min(), lats.min()) * Affine.scale(lon_res, lat_res)
+
+            # Create mask using rasterio's geometry mask
+            from rasterio.features import geometry_mask
+
+            # Ensure mask_gdf is in EPSG:4326 (same as input data)
+            mask_gdf = self.mask_gdf.to_crs("EPSG:4326")
+
+            # Create the mask
+            mask = ~geometry_mask(
+                mask_gdf.geometry,
+                out_shape=(len(ds.lat), len(ds.lon)),
+                transform=transform,
+                invert=True
+            )
+
+            # Expand mask if we have a time dimension
+            if 'time' in ds.dims:
+                mask = np.broadcast_to(
+                    mask[np.newaxis, :, :],
+                    (ds.sizes['time'], ds.sizes['lat'], ds.sizes['lon'])
+                )
+
+            # Apply the mask to each data variable
+            for var in processed_ds.data_vars:
+                if var != 'crs':  # Skip CRS variable
+                    processed_ds[var] = processed_ds[var].where(mask)
+
+            # Get bounds of the mask for clipping
+            bounds = mask_gdf.total_bounds  # [minx, miny, maxx, maxy]
+            buffer = max(lon_res, lat_res)  # Use one grid cell as buffer
+
+            # Clip to the bounds of the polygon with buffer
+            processed_ds = processed_ds.sel(
+                lon=slice(bounds[0] - buffer, bounds[2] + buffer),
+                lat=slice(bounds[3] + buffer, bounds[1] - buffer)  # Note reversed order for latitude
+            )
+
+            # Verify we have data after clipping
+            if processed_ds.sizes['lat'] == 0 or processed_ds.sizes['lon'] == 0:
+                self.logger.error(f"No data found within bounds for {var_name}")
+                return None
+
+            # Add metadata about the processing
+            processed_ds.attrs.update({
+                'original_crs': 'EPSG:4326',
+                'transformed_crs': 'EPSG:3857',
+                'processing_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'spatial_coverage': 'Tajikistan',
+                'clipping_bounds': str(bounds),
+                'spatial_resolution': f'{lon_res} degrees'
+            })
+
+            # Log the transformation and clipping
+            self.logger.info(f"Processed {var_name}: transformed coordinates and clipped to boundary")
+            self.logger.debug(f"Original shape: {ds.sizes}")
+            self.logger.debug(f"Processed shape: {processed_ds.sizes}")
+
+            return processed_ds
+
+        except Exception as e:
+            self.logger.error(f"Error in _process_single_file: {str(e)}")
             raise
 
     async def process_variable(self, var_name: str):
