@@ -47,7 +47,7 @@ class DataManager:
 
         self.logger.info(f"DataManager initialized in {self.env} environment")
 
-    async def get_data_for_date(self, variable: str, date: datetime) -> Optional[xr.Dataset]:
+    async def  get_data_for_date(self, variable: str, date: datetime) -> Optional[xr.Dataset]:
         """Get data for specific variable and date."""
         self.logger.debug(f"Getting data for {variable} on {date}")
         var_info = self.VARIABLES[variable]
@@ -116,7 +116,11 @@ class DataManager:
 
 
     async def download_file(self, filename: str, cache_file: Path):
-        """Download file using asyncssh."""
+        """Download file using asyncssh.
+
+        Only retries on errors that are not 'No such file' errors.
+        AWS S3 downloads remain synchronous.
+        """
         max_retries = 3
         retry_delay = 5
 
@@ -131,6 +135,7 @@ class DataManager:
                         str(temp_file)
                     )
                     temp_file.rename(cache_file)
+                    break
                 else:
                     # SSH download using asyncssh
                     temp_file = cache_file.with_suffix('.tmp')
@@ -149,18 +154,20 @@ class DataManager:
                                 self.logger.info(f"Successfully downloaded {filename}")
                                 break
                     except asyncssh.Error as e:
+                        if 'No such file' in str(e) or 'File not found' in str(e):
+                            self.logger.error(f"File not found: {filename}")
+                            raise  # Don't retry for missing files
                         self.logger.error(f"SSH operation failed: {str(e)}")
-                        raise
+                        if attempt == max_retries - 1:  # Last attempt
+                            raise
+                        await asyncio.sleep(retry_delay)
+                        continue
 
             except Exception as e:
-                self.logger.error(f"Download attempt {attempt + 1} failed: {e}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay)
-                else:
+                if attempt == max_retries - 1:  # Last attempt
                     raise
-            finally:
-                if 'temp_file' in locals() and temp_file.exists():
-                    temp_file.unlink()
+                await asyncio.sleep(retry_delay)
+                continue
 
 
     def clean_cache(self):

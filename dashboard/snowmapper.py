@@ -64,7 +64,6 @@ logger = logger_setup.setup()
 # Color settings
 # Set color map for filled contours
 # Inspired by https://whiterisk.ch/de/conditions/snow-maps/new_snow
-MAP_COLORS_NEW_SNOW = ['#cdffcd', '#99f0b2', '#53bd9f', '#3296b4', '#0670b0', '#054f8c', '#610432', '#4d020f']
 MAP_COLOR_SCALE_NEW_SNOW = [0.1, 10.0, 20.0, 30.0, 40.0, 60.0, 80.0, 100.0]  # in cm
 MAP_COLOR_SCALE_HS = [0.1, 20.0, 50.0, 80.0, 120.0, 200.0, 300.0, 400.0]  # in cm
 
@@ -97,7 +96,7 @@ class SnowMapViewer:
         # Get bounds from projections config
         self.bounds = self.config['projections']['bounds']['web_mercator']
 
-    def read_zarr(self, var_name: str) -> Optional[xr.Dataset]:
+    '''def read_zarr(self, var_name: str) -> Optional[xr.Dataset]:
         """Read Zarr dataset with simple caching."""
         var_name = str(var_name)
         zarr_path = self.data_dir / f"{var_name}_processed.zarr"
@@ -122,6 +121,72 @@ class SnowMapViewer:
                 return None
 
             ds = xr.open_zarr(zarr_path)
+            if ds is not None:
+                self._cached_data[var_name] = (datetime.now(), ds)
+                self.logger.debug(f"Successfully read Zarr file for {var_name}")
+                return ds
+            else:
+                self.logger.error(f"Failed to read data from {zarr_path}")
+                return None
+
+        except Exception as e:
+            self.logger.error(f"Error reading Zarr file for {var_name}: {e}")
+            self.logger.debug(f"Attempted path: {zarr_path}")
+            return None'''
+
+    def read_zarr(self, var_name: str) -> Optional[xr.Dataset]:
+        """Read Zarr dataset with simple caching."""
+        var_name = str(var_name)
+        zarr_path = self.data_dir / f"{var_name}_processed.zarr"
+
+        self.logger.debug(f"Attempting to read Zarr file: {zarr_path}")
+
+        # Check cache with validation
+        if var_name in self._cached_data:
+            timestamp, data = self._cached_data[var_name]
+            if (datetime.now() - timestamp).seconds < 3600 and data is not None:  # 1 hour cache
+                self.logger.debug(f"Using cached data for {var_name}")
+                return data
+            else:
+                self.logger.debug(f"Removing invalid cache entry for {var_name}")
+                del self._cached_data[var_name]
+
+        try:
+            if not zarr_path.exists():
+                self.logger.error(f"Zarr file does not exist: {zarr_path}")
+                return None
+
+            ds = xr.open_zarr(zarr_path)
+
+            # Debug information
+            self.logger.debug(f"Raw dataset contents:")
+            self.logger.debug(f"Variables: {list(ds.data_vars)}")
+            self.logger.debug(f"Coordinates: {list(ds.coords)}")
+            self.logger.debug(f"Attributes: {ds.attrs}")
+
+            # Assume Web Mercator if no CRS is found
+            import rioxarray
+            # If crs is in data variables, extract its attributes and apply them
+            if 'crs' in ds.data_vars:
+                self.logger.debug(f"CRS variable found with attributes: {ds.crs.attrs}")
+                spatial_ref = ds.crs.attrs.get('spatial_ref')
+                if spatial_ref:
+                    ds.rio.write_crs(spatial_ref, inplace=True)
+                else:
+                    # Fallback to WG84 if no spatial_ref found
+                    ds.rio.write_crs("EPSG:4326", inplace=True)
+                    # Fallback to Web Mercator if no spatial_ref found
+                    #ds.rio.write_crs("EPSG:3857", inplace=True)
+                self.logger.debug(f"Applied CRS: {ds.rio.crs}")
+
+            # Reproject to Web Mercator if needed
+            if ds.rio.crs != "EPSG:3857":
+                self.logger.debug(f"Reprojecting dataset to Web Mercator")
+                ds = ds.rio.reproject("EPSG:3857")
+
+            # Drop the crs variable as it's now in the attributes
+            #ds = ds.drop_vars('crs')
+
             if ds is not None:
                 self._cached_data[var_name] = (datetime.now(), ds)
                 self.logger.debug(f"Successfully read Zarr file for {var_name}")
@@ -192,7 +257,7 @@ class SnowMapViewer:
             self.logger.exception("Detailed error:")
             return gv.Text(0, 0, f"Error: {str(e)}")
 
-    def create_map(self, var_name: str, time_idx: datetime, data_type: str = 'forecast',
+    '''def create_map(self, var_name: str, time_idx: datetime, data_type: str = 'forecast',
                   basemap: str = 'CartoDB Positron', opacity: float = 0.7) -> gv.Image:
         """Create a map visualization with variable overlay."""
         try:
@@ -218,6 +283,10 @@ class SnowMapViewer:
             # Make zeros transparent
             data = data.where(data != 0)
 
+            # Print type of data and data itself
+            self.logger.debug(f"Data type: {type(data)}")
+            self.logger.debug(f"Data: {data}")
+
             # Create contour levels
             min_val = var_config['min_value']
             max_val = var_config['max_value']
@@ -229,26 +298,26 @@ class SnowMapViewer:
             self.logger.debug(f"levels for contours: {levels}")
 
             # Create filled contours (optional)
-            filled_contours = hv.QuadMesh((data.lon, data.lat, data)).opts(
-                colorbar=True,
-                cmap=var_config['colormap'],
-                clim=(min_val, max_val),
-                alpha=opacity * 0.5,  # Reduce opacity for filled contours
-                tools=['hover']
-            )
+            #filled_contours = hv.QuadMesh((data.lon, data.lat, data)).opts(
+            #    colorbar=True,
+            #    cmap=var_config['colormap'],
+            #    clim=(min_val, max_val),
+            #    alpha=opacity * 0.5,  # Reduce opacity for filled contours
+            #    tools=['hover']
+            #)
 
             # Create contour lines
-            contours = hv.operation.contours(hv.QuadMesh((data.lon, data.lat, data)), levels=levels).opts(
-                line_color='black',
-                line_width=1,
-                alpha=opacity,
-                tools=['hover']
-            )
+            #contours = hv.operation.contours(hv.QuadMesh((data.lon, data.lat, data)), levels=levels).opts(
+            #    line_color='black',
+            #    line_width=1,
+            #    alpha=opacity,
+            #    tools=['hover']
+            #)
 
             # Create the raster layer with user-defined opacity
             raster = gv.Image(
                 data,
-                kdims=['lon', 'lat'],
+                kdims=['x', 'y'],
                 vdims=[var_config['name']]
             ).opts(
                 colorbar=True,
@@ -279,12 +348,162 @@ class SnowMapViewer:
         except Exception as e:
             self.logger.error(f"Error creating map: {e}")
             self.logger.exception("Detailed error:")
+            return gv.Text(0, 0, f"Error: {str(e)}")'''
+
+    def plot_snow_data(self, data, projection = 'WGS84'):
+        """Plot snow data using matplotlib."""
+        import matplotlib.pyplot as plt
+        # Convert dask array to numpy array if needed
+        snow_values = data.compute()  # or data.values if already computed
+
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=(12, 8))
+
+        # Create mesh grid from lat/lon coordinates
+        if projection == 'WGS84':
+            self.logger.debug(f"Plotting data in WGS84 projection")
+            x, y = np.meshgrid(data.lat, data.lon)
+        else:
+            self.logger.debug(f"Plotting data in Web Mercator projection")
+            x, y = np.meshgrid(data.x, data.y)
+
+        self.logger.debug(f"x: min: {x.min()}, max: {x.max()}")
+        self.logger.debug(f"y: min: {y.min()}, max: {y.max()}")
+
+        # Create the plot
+        # Using pcolormesh for irregular grids
+        im = ax.pcolormesh(x, y, snow_values,
+                          shading='auto',
+                          cmap='Blues',  # or 'YlOrRd' or any other colormap
+                          vmin=0)  # start from 0 for snow height
+
+        # Add colorbar
+        cbar = plt.colorbar(im, ax=ax)
+
+        # Set labels and title
+        ax.set_xlabel('Easting')
+        ax.set_ylabel('Northing')
+
+        # Add gridlines
+        ax.grid(True, linestyle='--', alpha=0.6)
+
+        # Adjust layout
+        plt.tight_layout()
+
+        return fig
+
+    def create_map(self, var_name: str, time_idx: datetime, data_type: str = 'forecast',
+                   basemap: str = 'CartoDB Positron', opacity: float = 0.7) -> gv.Image:
+        """Create a map visualization with variable overlay."""
+        self.logger.debug(f"Creating map for {var_name}, {time_idx}, {data_type}, {basemap}, {opacity}")
+        try:
+            # Get base map first
+            map_view = self.create_base_map(basemap)
+
+            self.logger.debug(f"Reading Zarr data for {var_name}")
+            ds = self.read_zarr(var_name)
+            if ds is None:
+                self.logger.error("Could not read dataset")
+                return map_view  # Return just the base map if data can't be loaded
+
+            var_key = f"{var_name}_{data_type}"
+            if var_key not in ds:
+                self.logger.error(f"Variable {var_key} not found in dataset")
+                return map_view  # Return just the base map if variable not found
+
+            # Get variable config
+            var_config = self.config['variables'][var_name]
+
+            # Get data for specific time
+            self.logger.debug(f"Time index: {time_idx}")
+            self.logger.debug(f"Times in ds: {ds.time.values}")
+            data = ds[var_key].sel(time=time_idx, method='nearest')
+
+            # Select the first region (assuming region dimension exists)
+            if 'region' in data.dims:
+                data = data.isel(region=0)
+
+            # Make zeros transparent
+            data = data.where(data != 0)
+
+            # Print type of data and data itself
+            self.logger.debug(f"Data type: {type(data)}")
+            self.logger.debug(f"Data: {data}")
+            #self.logger.debug(f"Print part of the data named {var_name}: {data.values}")
+            #self.logger.debug(f"Print data which is not nan: {data.values[~np.isnan(data.values)]}")
+
+            # Print loggs for testing if x and y are within self.bounds
+            self.logger.debug(f"data min_x: {data.x.min().values.item()}")
+            self.logger.debug(f"data max_x: {data.x.max().values.item()}")
+            self.logger.debug(f"data min_y: {data.y.min().values.item()}")
+            self.logger.debug(f"data max_y: {data.y.max().values.item()}")
+            self.logger.debug(f"Map view bounds: {self.bounds}")
+
+            self.logger.debug(f"X coordinate system: {data.x.attrs}")
+            self.logger.debug(f"Y coordinate system: {data.y.attrs}")
+            self.logger.debug(f"CRS: {data.rio.crs}")
+            # If data.rio.crs is not set, set it to Web Mercator
+            if data.rio.crs is None:
+                data.rio.write_crs("EPSG:3857", inplace=True)
+                self.logger.debug(f"Applied CRS: {data.rio.crs}")
+
+            self.logger.debug(f"var_config['name']: {var_config['name']}")
+
+            # if logger mode is set to debug, plot the map using matplotlib and
+            # save it as a png file
+            self.logger.debug(f"Logger level: {self.logger.level}")
+            if self.logger.level == 0:
+                self.logger.debug(f"Plotting map for debugging")
+                fig = self.plot_snow_data(data, projection='Web Mercator')
+                fig.show()
+                # Save figure
+                save_path = f"../data/processed/debugging/{var_name}_snowmapper.png"
+                fig.savefig(save_path)
+
+            self.logger.debug(f"Coordinates in Web Mercator? CRS={data.rio.crs}")
+            self.logger.debug(f"X range: {data.x.min().values} to {data.x.max().values}")
+            self.logger.debug(f"Y range: {data.y.min().values} to {data.y.max().values}")
+
+            # Create the raster layer with user-defined opacity
+            raster = hv.QuadMesh(
+                (data.x, data.y, data.values),  # Use x, y coordinates directly
+                #['x', 'y'],
+                #vdims=[var_config['name']]
+            ).opts(
+                colorbar=True,
+                cmap=var_config['colormap'],
+                #clim=(var_config['min_value'], var_config['max_value']),
+                tools=['hover'],
+                alpha=opacity,
+                data_aspect=1,
+                show_grid=False,
+                title=f"{var_config['figure_title']} ({var_config['units']}) - {pd.to_datetime(time_idx).strftime('%Y-%m-%d')}"
+            )
+
+            # Combine base map with raster
+            return (map_view * raster).opts(
+                hooks=[remove_bokeh_logo],
+                width=1200,
+                height=800,
+                #xaxis=None,
+                #yaxis=None,
+                active_tools=['pan', 'wheel_zoom'],
+                scalebar=True,
+                xlim=(self.bounds['min_x'], self.bounds['max_x']),
+                ylim=(self.bounds['min_y'], self.bounds['max_y']),
+                projection=crs.GOOGLE_MERCATOR,
+                aspect='equal',
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error creating map: {e}")
+            self.logger.exception("Detailed error:")
             return gv.Text(0, 0, f"Error: {str(e)}")
 
 
 class SnowMapDashboard(param.Parameterized):
     variable = param.Selector()
-    data_type = param.Selector(objects=['forecast', 'accumulated', 'historical'])
+    data_type = param.Selector(objects=['time_series', 'accumulated'])
     time_offset = param.Integer(default=0, bounds=(config['dashboard']['day_slider_min'], config['dashboard']['day_slider_max']))  # Slider for relative days
     basemap = param.Selector(default='CartoDB Positron', objects=[
         #'OpenStreetMap',
@@ -315,7 +534,7 @@ class SnowMapDashboard(param.Parameterized):
 
         # Initialize viewer
         self.viewer = SnowMapViewer(data_dir, config)
-        self.data_type = 'forecast'
+        self.data_type = 'time_series'
 
         # Set up variable selector with None option
         variables = ['None'] + list(config['variables'].keys())

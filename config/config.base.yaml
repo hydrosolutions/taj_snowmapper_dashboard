@@ -2,11 +2,11 @@
 
 # -- Data processor -- #
 # General settings
-# How long we keep snow data files on the server
+# Looking back <retention_days> days from today
 retention_days: 3
 # How long we keep snow data in the cache
 cache:
-  max_age_hours: 72
+  max_age_hours: 0.01
   max_size_mb: 1000
 
 projections:
@@ -30,6 +30,15 @@ variables:
   - hs
   - swe
   - rof
+
+# Configuring the data smoothing and upscaling
+visualization:
+  enable_optimization: true
+  smoothing_factor: 1.0
+  upscale_factor: 2.0
+
+
+
 
 # -- Dashboard -- #
 # Map settings
