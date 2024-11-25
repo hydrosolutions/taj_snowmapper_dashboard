@@ -17,12 +17,6 @@ jobs:
     name: Build and push backend (data processor) for Snowmapper Tajikistan image
 
     steps:
-      # Reference directory is processing
-      - name: Set up working directory
-        run: |
-          cd processing
-          ls -la
-
       # Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,7 +36,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./processing
           push: true
           tags: ${{ env.IMAGE_NAME_BACKEND }}:${{ env.IMAGE_TAG }}
           cache-from: type=registry,ref=${{ env.IMAGE_NAME_BACKEND }}:buildcache
@@ -71,7 +65,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./dashboard
           push: true
           tags: ${{ env.IMAGE_NAME_DASHBOARD }}:${{ env.IMAGE_TAG }}
           cache-from: type=registry,ref=${{ env.IMAGE_NAME_DASHBOARD }}:buildcache
