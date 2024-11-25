@@ -1,32 +1,33 @@
 # Core data processing
-numpy
-pandas
-xarray
-dask
-netCDF4
-scipy
-bottleneck
+numpy==1.26.4
+pandas==2.2.2
+xarray==2024.10.0
+rioxarray==0.17.0
+dask==2024.10.0
+netCDF4==1.6.2
+scipy==1.13.1
+bottleneck==1.3.7
 
 # Geospatial libraries
-geopandas
-rasterio
-cartopy
-pyproj
-shapely
-fiona
+geopandas==0.14.2
+rasterio==1.3.10
+cartopy==0.22.0
+pyproj==3.6.1
+shapely==2.0.5
+fiona==1.9.5
 
 # AWS SDK for data access
-boto3
+boto3==1.34.154
 
 # Azure SDK for data access
 azure-storage-blob
 
 # Utilities
-python-dotenv
+python-dotenv==1.0.1
 schedule
 tqdm
 logging
-asyncio
+asyncio==1.6.0
 
 # Optional: visualization
 matplotlib
