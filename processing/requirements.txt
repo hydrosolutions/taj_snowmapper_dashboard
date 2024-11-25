@@ -26,7 +26,6 @@ azure-storage-blob
 python-dotenv==1.0.1
 schedule
 tqdm
-logging
 asyncio==1.6.0
 
 # Optional: visualization

@@ -1,4 +1,3 @@
-asyncio==2.18.0
 bokeh==3.6.1
 boto3==1.34.154
 Cartopy==0.24.1
