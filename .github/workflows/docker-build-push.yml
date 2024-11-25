@@ -17,6 +17,13 @@ jobs:
     name: Build and push backend (data processor) for Snowmapper Tajikistan image
 
     steps:
+      # Reference directory is processing
+      - name: Set up working directory
+        run: |
+          cd processing
+          ls -la
+
+      # Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
 
