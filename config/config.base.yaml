@@ -58,7 +58,7 @@ variables:
     widget_short_name: "HS"
     units: "m"
     colormap: ['#cdffcd', '#99f0b2', '#53bd9f', '#3296b4', '#0670b0', '#054f8c', '#610432', '#4d020f']
-    color_levels: [0.001, 0.2, 0.5, 0.8, 1.2, 2.0, 3.0, 4.0]  # converted from cm to m
+    color_levels: [0.001, 0.2, 0.5, 0.8, 1.2, 2.0, 3.0, 4.0, 7.0]  # in m
     min_value: 0
     max_value: 10
   swe:
@@ -68,6 +68,7 @@ variables:
     widget_short_name: "SWE"
     units: "mm"
     colormap: "viridis_r"
+    color_levels: [0.001, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
     min_value: 0
     max_value: 200
   rof:
@@ -77,6 +78,7 @@ variables:
     widget_short_name: "SM"
     units: "mm"
     colormap: "YlOrRd"
+    color_levels: [0.001, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
     min_value: 0
     max_value: 4
 

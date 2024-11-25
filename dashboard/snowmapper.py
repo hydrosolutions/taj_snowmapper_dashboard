@@ -21,15 +21,21 @@ sys.path.append(str(project_root))
 import xarray as xr
 import panel as pn
 import holoviews as hv
+from holoviews import opts
 import geoviews as gv
 from cartopy import crs
 import pandas as pd
+import geopandas as gpd
 import param
 from datetime import datetime, timedelta
 import numpy as np
 import logging
 from dotenv import load_dotenv
 from typing import Optional
+from shapely.validation import make_valid
+import spatialpandas as spd
+import hvplot.pandas
+from bokeh.models.tickers import FixedTicker
 
 from utils.logging import LoggerSetup
 from utils.config import ConfigLoader
@@ -96,43 +102,12 @@ class SnowMapViewer:
         # Get bounds from projections config
         self.bounds = self.config['projections']['bounds']['web_mercator']
 
-    '''def read_zarr(self, var_name: str) -> Optional[xr.Dataset]:
-        """Read Zarr dataset with simple caching."""
-        var_name = str(var_name)
-        zarr_path = self.data_dir / f"{var_name}_processed.zarr"
-
-        self.logger.debug(f"Attempting to read Zarr file: {zarr_path}")
-
-        # Check cache with validation
-        if var_name in self._cached_data:
-            timestamp, data = self._cached_data[var_name]
-            if (datetime.now() - timestamp).seconds < 3600 and data is not None:  # 1 hour cache
-                self.logger.debug(f"Using cached data for {var_name}")
-                return data
-            else:
-                # Remove invalid cache entry
-                self.logger.debug(f"Removing invalid cache entry for {var_name}")
-                del self._cached_data[var_name]
-
-        try:
-            # Read data
-            if not zarr_path.exists():
-                self.logger.error(f"Zarr file does not exist: {zarr_path}")
-                return None
-
-            ds = xr.open_zarr(zarr_path)
-            if ds is not None:
-                self._cached_data[var_name] = (datetime.now(), ds)
-                self.logger.debug(f"Successfully read Zarr file for {var_name}")
-                return ds
-            else:
-                self.logger.error(f"Failed to read data from {zarr_path}")
-                return None
-
-        except Exception as e:
-            self.logger.error(f"Error reading Zarr file for {var_name}: {e}")
-            self.logger.debug(f"Attempted path: {zarr_path}")
-            return None'''
+        # Get country outline for map, a geojson
+        mask_path = project_root / self.config['paths']['mask_path']
+        # Replace geojson with shp
+        mask_path = mask_path.with_suffix('.shp')
+        self.mask_gdf_wgs = gpd.read_file(mask_path)
+        self.mask_gdf_wgs = spd.GeoDataFrame(self.mask_gdf_wgs)
 
     def read_zarr(self, var_name: str) -> Optional[xr.Dataset]:
         """Read Zarr dataset with simple caching."""
@@ -257,100 +232,7 @@ class SnowMapViewer:
             self.logger.exception("Detailed error:")
             return gv.Text(0, 0, f"Error: {str(e)}")
 
-    '''def create_map(self, var_name: str, time_idx: datetime, data_type: str = 'forecast',
-                  basemap: str = 'CartoDB Positron', opacity: float = 0.7) -> gv.Image:
-        """Create a map visualization with variable overlay."""
-        try:
-            # Get base map first
-            map_view = self.create_base_map(basemap)
-
-            ds = self.read_zarr(var_name)
-            if ds is None:
-                self.logger.error("Could not read dataset")
-                return map_view  # Return just the base map if data can't be loaded
-
-            var_key = f"{var_name}_{data_type}"
-            if var_key not in ds:
-                self.logger.error(f"Variable {var_key} not found in dataset")
-                return map_view  # Return just the base map if variable not found
-
-            # Get variable config
-            var_config = self.config['variables'][var_name]
-
-            # Get data for specific time
-            data = ds[var_key].sel(time=time_idx, method='nearest')
-
-            # Make zeros transparent
-            data = data.where(data != 0)
-
-            # Print type of data and data itself
-            self.logger.debug(f"Data type: {type(data)}")
-            self.logger.debug(f"Data: {data}")
-
-            # Create contour levels
-            min_val = var_config['min_value']
-            max_val = var_config['max_value']
-            # Get minimum and maximum values from data
-            min_val = data.min().values.item() if np.isfinite(min_val) else var_config['min_value']
-            max_val = data.max().values.item() if np.isfinite(max_val) else var_config['max_value']
-            n_levels = 10  # Adjust number of contour levels as needed
-            levels = np.linspace(min_val, max_val, n_levels)
-            self.logger.debug(f"levels for contours: {levels}")
-
-            # Create filled contours (optional)
-            #filled_contours = hv.QuadMesh((data.lon, data.lat, data)).opts(
-            #    colorbar=True,
-            #    cmap=var_config['colormap'],
-            #    clim=(min_val, max_val),
-            #    alpha=opacity * 0.5,  # Reduce opacity for filled contours
-            #    tools=['hover']
-            #)
-
-            # Create contour lines
-            #contours = hv.operation.contours(hv.QuadMesh((data.lon, data.lat, data)), levels=levels).opts(
-            #    line_color='black',
-            #    line_width=1,
-            #    alpha=opacity,
-            #    tools=['hover']
-            #)
-
-            # Create the raster layer with user-defined opacity
-            raster = gv.Image(
-                data,
-                kdims=['x', 'y'],
-                vdims=[var_config['name']]
-            ).opts(
-                colorbar=True,
-                cmap=var_config['colormap'],
-                clim=(var_config['min_value'], var_config['max_value']),
-                tools=['hover'],
-                alpha=opacity,
-                data_aspect=1,
-                show_grid=False,
-                title=f"{var_config['figure_title']} ({var_config['units']}) - {pd.to_datetime(time_idx).strftime('%Y-%m-%d')}"
-            )
-
-            # Combine base map with raster
-            return (map_view * raster).opts(
-                hooks=[remove_bokeh_logo],
-                width=1200,  # Allow width to adjust to container
-                height=800,  # Allow height to adjust to container
-                xaxis=None,  # Remove x axis
-                yaxis=None,  # Remove y axis
-                active_tools=['pan', 'wheel_zoom'],
-                scalebar=True,  # Add scale bar
-                xlim=(self.bounds['min_x'], self.bounds['max_x']),
-                ylim=(self.bounds['min_y'], self.bounds['max_y']),
-                projection=crs.GOOGLE_MERCATOR,
-                aspect='equal',
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error creating map: {e}")
-            self.logger.exception("Detailed error:")
-            return gv.Text(0, 0, f"Error: {str(e)}")'''
-
-    def plot_snow_data(self, data, projection = 'WGS84'):
+    def plot_snow_data(self, data, projection = 'Web Mercator'):
         """Plot snow data using matplotlib."""
         import matplotlib.pyplot as plt
         # Convert dask array to numpy array if needed
@@ -362,13 +244,22 @@ class SnowMapViewer:
         # Create mesh grid from lat/lon coordinates
         if projection == 'WGS84':
             self.logger.debug(f"Plotting data in WGS84 projection")
-            x, y = np.meshgrid(data.lat, data.lon)
+            x, y = np.meshgrid(data.lon, data.lat)
         else:
             self.logger.debug(f"Plotting data in Web Mercator projection")
             x, y = np.meshgrid(data.x, data.y)
 
         self.logger.debug(f"x: min: {x.min()}, max: {x.max()}")
         self.logger.debug(f"y: min: {y.min()}, max: {y.max()}")
+
+        # Add outline of the country
+        if projection == 'WGS84':
+            self.mask_gdf_wgs.plot(ax=ax, color='black', linewidth=1)
+        else:
+            import geopandas as gdp
+            mask_gdf_temp = gdp.read_file("../static/OSMB-Taj-country-borders.geojson")
+            mask_gdf_web = mask_gdf_temp.to_crs(epsg=3857)
+            mask_gdf_web.plot(ax=ax, color='red', linewidth=0.1)
 
         # Create the plot
         # Using pcolormesh for irregular grids
@@ -392,6 +283,144 @@ class SnowMapViewer:
 
         return fig
 
+    def create_label_overrides(self, color_levels, small_threshold=0.01):
+        """
+        Create major_label_overrides with custom formatting
+
+        Parameters:
+        -----------
+        color_levels : list
+            List of level values
+        small_threshold : float
+            Threshold below which to use more decimal places
+        """
+        return {
+            level: (
+                f'{level:.3f}' if level < small_threshold
+                else f'{level:.1f}' if level < 10
+                else f'{int(level)}'
+            )
+            for level in color_levels
+        }
+
+    def create_custom_colormap(self, var_config, n_colors):
+        """
+        Create a custom colormap for specific variables
+        """
+        if var_config['colormap'] == 'viridis_r':
+            # Create a custom reversed viridis-like colormap
+            colors = ['#fde724', '#9fd938', '#49c16d', '#1fa187', '#277e8e',
+                      '#365b8c', '#46317e', '#440154'][:n_colors]
+        elif var_config['colormap'] == 'YlOrRd':
+            # Custom colormap for yellow to red
+            colors = ['#ffffcc', '#ffeda0', '#fed976', '#feb24c',
+                      '#fd8d3c', '#fc4e2a', '#e31a1c', '#b10026'][:n_colors]
+        # If var_config['colormap'] is a list, use it directly
+        elif isinstance(var_config['colormap'], list):
+            colors = var_config['colormap'][:n_colors]
+        else:
+            # Default to a simple blue scale
+            colors = ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1',
+                     '#6baed6', '#4292c6', '#2171b5', '#084594'][:n_colors]
+
+        return colors
+
+    def create_contour_plot(self, raster, var_config, opacity=1.0):
+        """
+        Create a contour plot using HoloViews with Bokeh backend.
+
+        Parameters
+        ----------
+        raster : hv.Image or hv.Raster
+            The input raster data. Should be a HoloViews Image or Raster object
+            containing the data to be plotted. The raster should have:
+            - x coordinates
+            - y coordinates
+            - values (e.g., snow height data)
+
+        var_config : dict
+            Configuration dictionary containing:
+            - 'color_levels' : list
+                Levels where colors change, e.g., [0.001, 0.2, 0.5, 0.8, 1.2, 2.0, 3.0, 4.0]
+            - 'colormap' : str or list
+                Either a string naming a colormap (e.g., 'Blues', 'RdYlBu')
+                or a list of colors (as hex strings or named colors)
+            - 'figure_title' : str
+                Title for the colorbar
+            - 'units' : str
+                Units for the data (appears in colorbar title)
+
+        opacity : float, optional
+            Transparency of the contours, between 0 (transparent) and 1 (opaque).
+            Default is 1.0.
+
+        Returns
+        -------
+        hv.Contours
+            A HoloViews Contours object that can be displayed or combined with other plots
+
+        Examples
+        --------
+        var_config = {
+            'color_levels': [0.001, 0.2, 0.5, 0.8, 1.2, 2.0, 3.0, 4.0],
+            'colormap': 'Blues',  # or ['#ffffff', '#add8e6', '#4169e1', ...]
+            'figure_title': 'Snow Height',
+            'units': 'm'
+        }
+
+        # Create plot
+        contour_plot = create_contour_plot(
+            raster=snow_height_data,
+            var_config=var_config,
+            opacity=0.8
+        )
+        """
+        self.logger.debug(f"Creating contour plot")
+        self.logger.debug(f"Raster shape: {raster.shape}")
+
+        # Create a list of colors that is one item shorter than levels
+        # as we need n-1 colors for n levels
+        levels = var_config['color_levels']
+
+        # If using a named colormap, create discrete colors
+        colors = self.create_custom_colormap(var_config, len(levels))
+
+        # Create a color mapper for the contours
+        from bokeh.models import LinearColorMapper
+        color_mapper = LinearColorMapper(palette=colors, low=levels[0], high=levels[-1])
+
+        # print debug information
+        self.logger.debug(f"Levels: {levels}")
+        self.logger.debug(f"Colors: {colors}")
+        self.logger.debug(f"type of colors: {type(colors)}")
+        self.logger.debug(f"Color mapper: {color_mapper}")
+
+        contours = hv.operation.contours(
+            raster,
+            levels=levels,  # This defines where the colors change
+            filled=True
+        ).opts(
+            colorbar=True,
+            #cmap=colors,
+            color_levels=levels,  # Explicitly set the levels
+            colorbar_opts={
+                'ticker': FixedTicker(ticks=levels),
+                'major_label_overrides': self.create_label_overrides(levels),
+                'title': f"{var_config['figure_title']} ({var_config['units']})"
+            },
+            colorbar_position='top',
+            line_color=None,
+            line_width=0,
+            alpha=opacity,
+            width=325,
+            height=325,
+            #tools=['hover']
+        )
+
+        self.logger.debug(f"Contours created successfully")
+
+        return contours
+
     def create_map(self, var_name: str, time_idx: datetime, data_type: str = 'forecast',
                    basemap: str = 'CartoDB Positron', opacity: float = 0.7) -> gv.Image:
         """Create a map visualization with variable overlay."""
@@ -399,6 +428,18 @@ class SnowMapViewer:
         try:
             # Get base map first
             map_view = self.create_base_map(basemap)
+
+            # Create a map layer with the country outline
+            country_outline = self.mask_gdf_wgs.hvplot(
+                geo=True,
+                project=True,
+                line_color='black',
+                line_width=1,
+                # No fill
+                fill_color=None,
+                alpha=1,
+            )
+
 
             self.logger.debug(f"Reading Zarr data for {var_name}")
             ds = self.read_zarr(var_name)
@@ -454,7 +495,7 @@ class SnowMapViewer:
             self.logger.debug(f"Logger level: {self.logger.level}")
             if self.logger.level == 0:
                 self.logger.debug(f"Plotting map for debugging")
-                fig = self.plot_snow_data(data, projection='Web Mercator')
+                fig = self.plot_snow_data(data, projection='Web Mercator')  # projection: 'Web Mercator' or 'WGS84'
                 fig.show()
                 # Save figure
                 save_path = f"../data/processed/debugging/{var_name}_snowmapper.png"
@@ -467,21 +508,50 @@ class SnowMapViewer:
             # Create the raster layer with user-defined opacity
             raster = hv.QuadMesh(
                 (data.x, data.y, data.values),  # Use x, y coordinates directly
-                #['x', 'y'],
-                #vdims=[var_config['name']]
-            ).opts(
-                colorbar=True,
-                cmap=var_config['colormap'],
-                #clim=(var_config['min_value'], var_config['max_value']),
-                tools=['hover'],
-                alpha=opacity,
-                data_aspect=1,
-                show_grid=False,
-                title=f"{var_config['figure_title']} ({var_config['units']}) - {pd.to_datetime(time_idx).strftime('%Y-%m-%d')}"
-            )
+                ['x', 'y'],
+                vdims=[var_config['name']]
+            )#.opts(
+             #   colorbar=True,
+             #   cmap=var_config['colormap'],
+             #   #clim=(var_config['min_value'], var_config['max_value']),
+             #   tools=['hover'],
+             #   alpha=opacity,
+             #   data_aspect=1,
+             #   show_grid=False,
+             #   title=f"{var_config['figure_title']} ({var_config['units']}) - {pd.to_datetime(time_idx).strftime('%Y-%m-%d')}"
+            #)
+            '''
+            # Print color levels
+            self.logger.debug(f"Color levels: {var_config['color_levels']}")
+            contours = hv.operation.contours(
+                raster,
+                levels=var_config['color_levels'],
+                filled=True).opts(
+                    colorbar=True,
+                    cmap=var_config['colormap'],
+                    # Set manual distance between contour lines
+                    # Add title to colorbar
+                    colorbar_opts={
+                        'major_label_overrides': {0.001: '0.001', 0.2: '0.2', 0.5: '0.5', 0.8: '0.8', 1.2: '1.2', 2.0: '2.0', 3.0: '3.0', 4.0: '4.0'},
+                        'ticker': FixedTicker(ticks=var_config['color_levels']),
+                        'title': f"{var_config['figure_title']} ({var_config['units']})"
+                        },
+                    # Move the title of the colorbar to the top
+                    colorbar_position='top',
+                    line_color=None,
+                    line_width=0,
+                    #tools=['hover'],
+                    alpha=opacity,
+                    #title=f"{var_config['figure_title']} ({var_config['units']}) - {pd.to_datetime(time_idx).strftime('%Y-%m-%d')}"
+                )
+            contours.opts(opts.Contours(cmap=var_config['colormap'], colorbar=True, tools=['hover'],
+                           width=325, height=325,))
+                           #colorbar_opts={'major_label_overrides': {0.001: '0.001', 0.2: '0.2', 0.5: '0.5', 0.8: '0.8', 1.2: '1.2', 2.0: '2.0', 3.0: '3.0', 4.0: '4.0'}}))
+            '''
+            contours = self.create_contour_plot(raster, var_config, opacity)
 
             # Combine base map with raster
-            return (map_view * raster).opts(
+            return (map_view * contours * country_outline).opts(
                 hooks=[remove_bokeh_logo],
                 width=1200,
                 height=800,

@@ -1,0 +1,33 @@
+# Core data processing
+numpy
+pandas
+xarray
+dask
+netCDF4
+scipy
+bottleneck
+
+# Geospatial libraries
+geopandas
+rasterio
+cartopy
+pyproj
+shapely
+fiona
+
+# AWS SDK for data access
+boto3
+
+# Azure SDK for data access
+azure-storage-blob
+
+# Utilities
+python-dotenv
+schedule
+tqdm
+logging
+asyncio
+
+# Optional: visualization
+matplotlib
+seaborn

@@ -13,6 +13,7 @@ services:
       - snow_data:/app/data
       - ./logs:/app/logs
     environment:
+      - .env
       - DASHBOARD_ENV=aws
       - AWS_REGION=${AWS_REGION}
       - AWS_BUCKET=${AWS_BUCKET}

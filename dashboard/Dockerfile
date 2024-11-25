@@ -39,7 +39,7 @@ COPY --chown=dashboard:dashboard . /app
 ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
     DASHBOARD_ENV=aws \
-    PORT=5006
+    PORT=${PORT}
 
 # Switch to non-root user
 USER dashboard
