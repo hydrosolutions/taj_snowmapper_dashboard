@@ -4,9 +4,9 @@
 # General settings
 # Looking back <retention_days> days from today
 retention_days: 3
-# How long we keep snow data in the cache
+# How long we keep snow data in the cache folder
 cache:
-  max_age_hours: 0.01
+  max_age_hours: 90
   max_size_mb: 1000
 
 projections:

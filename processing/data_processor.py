@@ -113,27 +113,32 @@ class SnowDataPipeline:
         self.logger.debug(f"Resolution of dataset: {res_lat}, {res_lon}")
 
         # Get the bounds for the slicing
-        aoi_lat = [float(self.bounds[1]) - res_lat,
-                    float(self.bounds[3] + res_lat)]
-        aoi_lon = [float(self.bounds[0]) - res_lon,
-                    float(self.bounds[2] + res_lon)]
+        aoi_lat = [float(self.bounds[1]) - (res_lat*0.2),
+                    float(self.bounds[3] + (res_lat*0.2))]
+        aoi_lon = [float(self.bounds[0]) - (res_lon*0.2),
+                    float(self.bounds[2] + (res_lon*0.2))]
 
         # Slice the dataset
         self.logger.debug(f"Slicing dataset to bounds: {aoi_lat}, {aoi_lon}")
-        ds_clip = ds.sel(lat=slice(aoi_lat[0], aoi_lat[1]),
-                         lon=slice(aoi_lon[0], aoi_lon[1]))
+        #ds_clip = ds.sel(lat=slice(aoi_lat[0], aoi_lat[1]),
+        #                 lon=slice(aoi_lon[0], aoi_lon[1]))
+        ds_clip = ds
         self.logger.debug(f"Dataset shape after slicing: {ds_clip[var_name].shape}")
 
         # Create a mask using regionmask
         self.logger.debug(f"Creating mask using regionmask")
-        mask = regionmask.mask_3D_geopandas(self.mask_gdf, ds_clip.lon, ds_clip.lat)
+        mask = regionmask.mask_3D_geopandas(
+            self.mask_gdf,
+            ds_clip.lon,
+            ds_clip.lat,
+            wrap_lon=True)
 
         # Apply the mask to the dataset
         self.logger.debug(f"Applying mask to dataset")
         ds_clip = ds_clip.where(mask)
         self.logger.debug(f"Dataset shape after masking: {ds_clip[var_name].shape}")
 
-        '''# Smooth the data
+        # Smooth the data
         self.logger.debug(f"Smoothing the data")
         self.logger.debug(f"Dimensions of ds_clip: {ds_clip.dims}")
 
@@ -155,12 +160,12 @@ class SnowDataPipeline:
             input_core_dims=[["lat", "lon"]],  # Process over 2D slices (lat, lon)
             output_core_dims=[["lat", "lon"]],  # Output is also 2D
             vectorize=True,  # Apply the function independently to each time step
-            kwargs={"sigma": 2},  # Pass the smoothing parameter
+            kwargs={"sigma": 4},  # Pass the smoothing parameter
         )
         # Add crs attribute again
         # Add the CRS back as a variable to the smoothed data
         smoothed_data['crs'] = crs_var
-        ds_clip = smoothed_data.copy()'''
+        ds_clip = smoothed_data.copy()
 
         # If logger mode is set to debug, plot and save the masked data
         if self.logger.level == logging.DEBUG:
@@ -480,6 +485,7 @@ class SnowDataPipeline:
                 combined_data.attrs['historical_start'] = historical_times[-1].strftime('%Y-%m-%d')
                 combined_data.attrs['historical_end'] = historical_times[0].strftime('%Y-%m-%d')
 
+            '''
             # Generate contours
             contour_gdf = self.generate_contours(combined_data, var_name)
             if contour_gdf is not None:
@@ -491,6 +497,7 @@ class SnowDataPipeline:
                     contour_path = Path(self.config['paths']['output_dir']) / f"{var_name}_contours.geojson"
                     contour_gdf.to_file(contour_path, driver='GeoJSON')
                 self.logger.info(f"Saved contour data to {contour_path}")
+            '''
 
             # Save raster data
             self._save_processed_data(combined_data, var_name)

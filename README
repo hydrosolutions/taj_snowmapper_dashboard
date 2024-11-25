@@ -57,6 +57,13 @@ docker run --rm --env-file .env -p 5006:5006 snowmapper-tajikistan
 
 Optionally set up a reverse proxy to serve the web interface on port 80 ([Instructions](https://www.docker.com/blog/how-to-use-the-official-nginx-docker-image/)).
 
+#### Watchtower
+Optionally, you can use the watchtower to automatically update the docker container when a new image is available.
+```bash
+docker run -d --name watchtower -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower
+```
+
+
 #### Operationalize the data processor
 Define regular cron jobs
 ```bash
