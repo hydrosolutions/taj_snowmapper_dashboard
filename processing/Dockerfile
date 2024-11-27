@@ -37,6 +37,7 @@ RUN mkdir -p /app/logs
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV DASHBOARD_ENV=aws
 
 # Set default command
 CMD ["python", "processing/data_processor.py"]

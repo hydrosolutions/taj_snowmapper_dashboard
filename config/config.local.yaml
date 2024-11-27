@@ -12,13 +12,6 @@ paths:
   mask_path: "static/OSMB-Taj-country-borders.geojson"
   favicon_path: "../static/snowmapper_logo_version0.png"
 
-# SSH connection settings for data source
-ssh:
-  hostname: "${SSH_HOST}"
-  username: "${SSH_USER}"
-  key_path: "${SSH_KEY_PATH}"
-  remote_path: "${REMOTE_PATH}"
-
 # Logging configuration
 logging:
   level: "DEBUG"

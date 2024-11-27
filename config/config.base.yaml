@@ -1,6 +1,14 @@
 # Base configuration shared between environments
 
+
 # -- Data processor -- #
+# SSH connection settings for data source
+ssh:
+  hostname: "${SSH_HOST}"
+  username: "${SSH_USER}"
+  key_path: "${SSH_KEY_PATH}"
+  remote_path: "${REMOTE_PATH}"
+
 # General settings
 # Looking back <retention_days> days from today
 retention_days: 3

@@ -6,17 +6,10 @@ imports:
 
 # Paths are relative to the project root directory
 paths:
-  input_dir: "/data/input"
-  output_dir: "/data/processed"
-  cache_dir: "/data/cache"
+  input_dir: "/app/data/input"
+  output_dir: "/app/data/processed"
+  cache_dir: "/app/data/cache"
   mask_path: "/app/static/OSMB-Taj-country-borders.geojson"
-
-# AWS connection settings
-aws:
-  region: "${AWS_REGION}"
-  bucket: "${AWS_BUCKET}"
-  prefix: "${AWS_PREFIX}"
-  endpoint: "https://s3.${AWS_REGION}.amazonaws.com"
 
 # Logging configuration
 logging:
