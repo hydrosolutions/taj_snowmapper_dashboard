@@ -21,7 +21,7 @@ docker run --rm \
   --volume $PROJECT_DIR/logs:/app/logs \
   --volume $PROJECT_DIR/processing/swe_server.pem:/app/processing/swe_server.pem:ro \
   --env-file $PROJECT_DIR/.env \
-  taj-snowmapper-backend:latest 2>> $PROJECT_DIR/logs/processor.log
+  mabesa/taj-snowmapper-backend:latest 2>> $PROJECT_DIR/logs/processor.log
 
 EXIT_CODE=$?
 
