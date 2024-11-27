@@ -9,6 +9,9 @@ cd $PROJECT_DIR
 # Get current timestamp for logging
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
+# Create logs directory if it doesn't exist
+mkdir -p $PROJECT_DIR/logs
+
 # Run the data processor container
 echo "[$TIMESTAMP] Starting data processor" >> $PROJECT_DIR/logs/processor.log
 
