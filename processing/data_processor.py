@@ -130,8 +130,23 @@ class SnowDataPipeline:
         mask = regionmask.mask_3D_geopandas(
             self.mask_gdf,
             ds_clip.lon,
-            ds_clip.lat,
-            wrap_lon=True)
+            ds_clip.lat)
+
+        # Convert mask to binary (True/False) to avoid edge effects
+        mask = mask == 1
+
+        # Plot and save the mask
+        if self.logger.level == logging.DEBUG:
+            self.logger.debug(f"Plotting and saving the mask")
+            mask.plot()
+            # Save figure
+            save_path = f"../data/processed/debugging/{var_name}_mask.png"
+            # Expand the path to full path
+            save_path = os.path.abspath(save_path)
+            try:
+                os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            except Exception as e:
+                self.logger.error(f"Error creating directory: {str(e)}")
 
         # Apply the mask to the dataset
         self.logger.debug(f"Applying mask to dataset")

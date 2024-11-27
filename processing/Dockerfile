@@ -11,23 +11,28 @@ RUN apt-get update && apt-get install -y \
     gdal-bin \
     libgeos-dev \
     libproj-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for GDAL
 ENV GDAL_CONFIG=/usr/bin/gdal-config
 ENV PROJ_LIB=/usr/share/proj
 
-# Copy only requirements first for better cache usage
-COPY ./requirements.txt /app/requirements.txt
+# Install GDAL Python bindings first
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir GDAL==$(gdal-config --version)
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy only requirements first for better cache usage
+COPY ./processing/requirements.txt /app/processing/requirements.txt
+
+# Install remaining Python dependencies
+RUN pip install --no-cache-dir -r /app/processing/requirements.txt
 
 # Copy the rest of the application
 COPY . /app/
 
 # Create necessary directories
-#RUN mkdir -p /app/data/cache /app/data/input /app/data/processed /app/logs
+RUN mkdir -p /app/logs
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
