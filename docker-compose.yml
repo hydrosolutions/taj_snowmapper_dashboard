@@ -3,8 +3,8 @@ services:
     build:
       context: .
       dockerfile: ./dashboard/Dockerfile
-    image: snowmapper-dashboard:latest
-    container_name: snowmapper-dashboard
+    image: taj-snowmapper-dashboard:latest
+    container_name: taj-snowmapper-dashboard
     ports:
       - "${PORT}:${PORT}"
     volumes:
@@ -30,10 +30,10 @@ services:
 
 volumes:
   data:
-    name: snowmapper_data
+    name: taj_snowmapper_data
   config:
-    name: snowmapper_config
+    name: taj_snowmapper_config
 
 networks:
   default:
-    name: snowmapper_network
+    name: taj_snowmapper_network

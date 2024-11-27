@@ -13,12 +13,12 @@ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 echo "[$TIMESTAMP] Starting data processor" >> $PROJECT_DIR/logs/processor.log
 
 docker run --rm \
-  --name snowmapper-processor-$(date +%Y%m%d) \
+  --name taj-snowmapper-processor-$(date +%Y%m%d) \
   --volume $PROJECT_DIR/data:/app/data \
   --volume $PROJECT_DIR/logs:/app/logs \
   --volume $PROJECT_DIR/processing/swe_server.pem:/app/processing/swe_server.pem:ro \
   --env-file $PROJECT_DIR/.env \
-  snowmapper-processor:latest 2>> $PROJECT_DIR/logs/processor.log
+  taj-snowmapper-backend:latest 2>> $PROJECT_DIR/logs/processor.log
 
 EXIT_CODE=$?
 

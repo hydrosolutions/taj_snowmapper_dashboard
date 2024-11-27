@@ -33,6 +33,8 @@ Edit the `.env` file and set the environment variables.
 vi .env
 ```
 
+Copy the .pem file to the server running the snowmapperForecast model operationally and set the path to the .pem file in the .env file relative to the folder /app/processing.
+
 #### Pull & test-run the docker images
 Pull the docker image
 ```bash
