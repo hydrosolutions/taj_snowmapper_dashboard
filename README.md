@@ -1,3 +1,5 @@
+![deploy taj.snowmapper.ch dashboard](https://github.com/hydrosolutions/taj_snowmapper_dashboard/actions/workflows/docker-build-push.yml/badge.svg) [![License](https://img.shields.io/github/license/hydrosolutions/taj_snowmapper_dashboard)](https://github.com/hydrosolutions/taj_snowmapper_dashboard/blob/main/LICENSE) [![Python 3.12](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-311/) [![Last Commit](https://img.shields.io/github/last-commit/hydrosolutions/taj_snowmapper_dashboard)](https://github.com/hydrosolutions/taj_snowmapper_dashboard/commits/main)
+
 ## Snowmapper Tajikistan
 This repository contains the code for the snowmapper tajikistan dashboard. The dashboard is a web application that displays snow cover data for Tajikistan. The data is sourced from the [snowmapperForecast](https://github.com/joelfiddes/snowmapperForecast) model implemented by @joelfiddes.
 
