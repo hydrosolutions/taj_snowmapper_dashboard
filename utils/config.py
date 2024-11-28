@@ -27,7 +27,7 @@ class ConfigLoader:
 
         # Force override SSH key path for AWS environment
         if env == 'aws':
-            merged_config['ssh']['SSH_KEY_PATH'] = f'/app/processing/{merged_config['ssh']['SSH_KEY_PATH']}'
+            merged_config['ssh']['SSH_KEY_PATH'] = f"/app/processing/{merged_config['ssh']['SSH_KEY_PATH']}"
 
         return merged_config
 
