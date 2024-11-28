@@ -34,7 +34,16 @@ fi
 # Run the data processor container
 echo "[$TIMESTAMP] Starting data processor" 2>> $PROJECT_DIR/logs/processor.log
 
-docker run --rm \
+# Copy the following docker run command to the logs directory
+echo "docker run command:" 2>> $PROJECT_DIR/logs/processor.log
+echo "docker run --rm --name taj-snowmapper-processor-$(date +%Y%m%d)" 2>> $PROJECT_DIR/logs/processor.log
+echo "  --volume $PROJECT_DIR/data:/app/data" 2>> $PROJECT_DIR/logs/processor.log
+echo "  --volume $PROJECT_DIR/logs:/app/logs" 2>> $PROJECT_DIR/logs/processor.log
+echo "  --volume $PROJECT_DIR/processing/swe_server.pem:/app/processing/swe_server.pem:ro" 2>> $PROJECT_DIR/logs/processor.log
+echo "  --env-file $PROJECT_DIR/.env mabesa/taj-snowmapper-backend:latest" 2>> $PROJECT_DIR/logs/processor.log
+
+# For debugging purposes, you can add the --rm flag to remove the container after it exits
+docker run # --rm \
   --name taj-snowmapper-processor-$(date +%Y%m%d) \
   --volume $PROJECT_DIR/data:/app/data \
   --volume $PROJECT_DIR/logs:/app/logs \
