@@ -82,6 +82,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 EXPOSE ${PORT}
 
 # Run the panel server
-CMD ["sh", "-c", "panel serve /app/dashboard/snowmapper.py --port $PORT --address 0.0.0.0 --allow-websocket-origin '*'"]
+CMD ["sh", "-c", "panel serve /app/dashboard/snowmapper.py --port $PORT --allow-websocket-origin=taj.snowmapper.ch"]
 #CMD panel serve /app/dashboard/snowmapper.py --port ${PORT}
 

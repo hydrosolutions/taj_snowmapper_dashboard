@@ -52,7 +52,7 @@ docker logs <container-id>
 
 To test-run the web interface, run the following docker compose command
 ```bash
-docker compose up
+docker compose up -d
 ```
 
 #### Operationalize the web interface
