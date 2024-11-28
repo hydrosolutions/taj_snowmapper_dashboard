@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
 # Set GDAL environment variables for building
 ENV GDAL_CONFIG=/usr/bin/gdal-config
 ENV PROJ_LIB=/usr/share/proj
+ENV PATH="/usr/bin:${PATH}"
 
 # Get GDAL version and set as env variable
 RUN export GDAL_VERSION=$(gdal-config --version) && \
