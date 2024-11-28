@@ -13,7 +13,7 @@ paths:
 
 # Prefix /app/processing to the SSH_KEY_PATH from .env
 ssh:
-  SSH_KEY_PATH: "/app/processing/"${SSH_KEY_PATH}
+  SSH_KEY_PATH: "/app/processing/${SSH_KEY_PATH}"
 
 # Logging configuration
 logging:
