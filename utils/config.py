@@ -27,7 +27,7 @@ class ConfigLoader:
 
         # Overwrite ssh key path if env is AWS
         if env == 'aws':
-            merged_config['ssh']['key_path'] = f"/app/processed/{merged_config['ssh']['key_path']}"
+            merged_config['ssh']['key_path'] = f"/app/processing/{merged_config['ssh']['key_path']}"
 
         return merged_config
 
