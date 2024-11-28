@@ -40,6 +40,7 @@ from bokeh.models.tickers import FixedTicker
 from utils.logging import LoggerSetup
 from utils.config import ConfigLoader
 from utils.data_warning import DataFreshnessManager
+from utils.translations import Translator
 
 # Initialize extensions
 pn.extension('tabulator')
@@ -592,6 +593,11 @@ class SnowMapDashboard(param.Parameterized):
         self.config = config
         self.logger = logging.getLogger('snowmapper.dashboard')
 
+        # Initialize translator
+        self.translator = Translator(config=self.config)
+        # Initialize components dict for translation updates
+        self.components = {}
+
         # Initialize data freshness manager
         self.data_freshness_manager = DataFreshnessManager()
 
@@ -615,6 +621,56 @@ class SnowMapDashboard(param.Parameterized):
         self.reference_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         self._update_time_bounds()
         #self.data_freshness_manager.update_warning_visibility(self.param.time_offset.bounds, self.config)
+
+    def translate(self, key: str, **kwargs) -> str:
+        return self.translator.get(key, **kwargs)
+
+    def register_component(self, component_id: str, update_func):
+        self.components[component_id] = update_func
+
+    def update_translations(self):
+        for update_func in self.components.values():
+            update_func()
+
+    def create_controls(self):
+        # Create variable selector with translated labels
+        variable_selector = pn.widgets.Select(
+            name=self.translate('variable_selector_label'),
+            options={
+                self.get_variable_label(var): var
+                for var in self.param.variable.objects
+            }
+        )
+
+        # Create time slider with translated label
+        time_slider = pn.widgets.IntSlider(
+            name=self.translate('time_slider_label',
+                              date=self.reference_date.strftime("%Y-%m-%d")),
+            value=self.time_offset,
+            start=self.param.time_offset.bounds[0],
+            end=self.param.time_offset.bounds[1]
+        )
+
+        # Create other controls with translations
+        basemap_selector = pn.widgets.RadioButtonGroup(
+            name=self.translate('basemap_selector_label'),
+            options=list(SnowMapViewer.TILE_SOURCES.keys())
+        )
+
+        opacity_slider = pn.widgets.FloatSlider(
+            name=self.translate('opacity_slider_label'),
+            value=self.opacity,
+            start=0.1,
+            end=1.0,
+            step=0.1
+        )
+
+        # Register components for translation updates
+        self.register_component('variable_selector',
+            lambda: setattr(variable_selector, 'name',
+                          self.translate('variable_selector_label')))
+
+        return variable_selector, time_slider, basemap_selector, opacity_slider
 
     def get_date_label(offset: int) -> str:
         date = dashboard.reference_date + timedelta(days=offset)
@@ -714,7 +770,7 @@ dashboard = SnowMapDashboard(
     data_dir=Path(config['paths']['output_dir']),
     config=config
 )
-
+"""
 # Create variable selector
 variable_selector = pn.widgets.Select(
     name='Variable',
@@ -747,7 +803,27 @@ opacity_slider = pn.widgets.FloatSlider(
     start=0.1,
     end=1.0,
     step=0.1
-)
+)"""
+# Create all controls using the dashboard's create_controls method
+variable_selector, time_slider, basemap_selector, opacity_slider = dashboard.create_controls()
+
+
+# Create language selector buttons
+def create_language_buttons():
+    buttons = []
+    for lang_name, lang_code in {'English': 'en_CH', 'Русский': 'ru_TJ'}.items():
+        # Create a link that reloads the page with the selected language
+        href = pn.state.location.pathname + f'?lang={lang_code}'
+        button = pn.widgets.Button(name=lang_name, button_type='primary', width=80)
+        button.js_on_click(args={'href': href}, code='window.location.href=href')
+        buttons.append(button)
+    return pn.Row(*buttons, sizing_mode='fixed')
+
+language_buttons = create_language_buttons()
+
+# Get default locale from config
+default_locale = dashboard.config['localization']['default_locale']
+selected_language = pn.state.location.query_params.get('lang', default_locale)
 
 # Link controls
 variable_selector.link(dashboard, value='variable')
@@ -783,6 +859,7 @@ template = pn.template.BootstrapTemplate(
     logo=config['paths']['favicon_path'],
     sidebar_width=350,
     header_background="#2B547E",  # Dark blue header
+    header=[pn.Row(pn.layout.HSpacer(), language_buttons)],
     favicon=config['paths']['favicon_path']
 )
 

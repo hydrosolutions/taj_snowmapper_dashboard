@@ -1,69 +1,58 @@
-TRANSLATIONS = {
-    'en': {
-        'title': 'Tajikistan Snowmapper Dashboard',
-        'variable_select': 'Select Variable',
-        'date_select': 'Select Date',
-        'language': 'Language',
-        'map_type': 'Map Type',
-        'opacity': 'Layer Opacity',
-        'snow_height': 'Snow Height',
-        'hs_short': 'HS',
-        'swe': 'Snow Water Equivalent',
-        'swe_short': 'SWE',
-        'runoff': 'Snow melt',
-        'rof_short': 'SM',
-        'change_24h': '24h Change',
-        'change_48h': '48h Change',
-        'change_72h': '72h Change',
-        'loading': 'Loading data...',
-        'no_data': 'No data available',
-        'unit_mm': 'mm',
-        'unit_m3s': 'm³/s'
-    },
-    'ru': {
-        'title': 'Панель мониторинга снега Таджикистана',
-        'variable_select': 'Select Variable ru',
-        'date_select': 'Select Date ru',
-        'language': 'Language ru',
-        'map_type': 'Map Type ru',
-        'opacity': 'Layer Opacity ru',
-        'snow_height': 'Snow Height ru',
-        'hs_short': 'HS ru',
-        'swe': 'Snow Water Equivalent ru',
-        'swe_short': 'SWE ru',
-        'runoff': 'Snow melt ru',
-        'rof_short': 'SM ru',
-        'change_24h': '24h Change ru',
-        'change_48h': '48h Change ru',
-        'change_72h': '72h Change ru',
-        'loading': 'Loading data... ru',
-        'no_data': 'No data available ru',
-        'unit_mm': 'mm ru',
-        'unit_m3s': 'm³/s ru'
-    },
-    'tj': {
-        'title': 'Лавҳаи назорати барф Тоҷикистон',
-        'variable_select': 'Select Variable tj',
-        'date_select': 'Select Date tj',
-        'language': 'Language tj',
-        'map_type': 'Map Type tj',
-        'opacity': 'Layer Opacity tj',
-        'snow_height': 'Snow Height tj',
-        'hs_short': 'HS tj',
-        'swe': 'Snow Water Equivalent tj',
-        'swe_short': 'SWE tj',
-        'runoff': 'Snow melt tj',
-        'rof_short': 'SM tj',
-        'change_24h': '24h Change tj',
-        'change_48h': '48h Change tj',
-        'change_72h': '72h Change tj',
-        'loading': 'Loading data... tj',
-        'no_data': 'No data available tj',
-        'unit_mm': 'mm tj',
-        'unit_m3s': 'm³/s tj'
-    }
-}
+import yaml
+import os
+from functools import lru_cache
+from typing import Dict, Optional
 
-def get_text(key: str, language: str) -> str:
-    """Get translated text for given key and language."""
-    return TRANSLATIONS.get(language, TRANSLATIONS['en']).get(key, key)
+class Translator:
+    def __init__(self, config: dict = None):
+        self.config = config
+        self.default_locale = self.config['localization']['default_locale']
+        self.current_locale = self.config['localization']['default_locale']
+        self._load_translations()
+
+    @lru_cache(maxsize=None)
+    def _load_translations(self) -> Dict:
+        """Load all translation files from translations directory"""
+        translations = {}
+        translation_dir = self.config['paths']['locale_dir']
+
+        if not os.path.exists(translation_dir):
+            os.makedirs(translation_dir)
+
+        for filename in os.listdir(translation_dir):
+            if filename.endswith('.yaml'):
+                locale = filename.split('.')[0]
+                with open(os.path.join(translation_dir, filename), 'r', encoding='utf-8') as f:
+                    translations[locale] = yaml.safe_load(f)
+        return translations
+
+    def set_locale(self, locale: str) -> None:
+        """Set the current locale"""
+        if locale in self._load_translations():
+            self.current_locale = locale
+        else:
+            self.current_locale = self.default_locale
+
+    def get(self, key: str, **kwargs) -> str:
+        """Get translated string for given key"""
+        translations = self._load_translations()
+
+        # Try to get translation for current locale
+        try:
+            text = translations[self.current_locale][key]
+        except (KeyError, TypeError):
+            # Fallback to default locale
+            try:
+                text = translations[self.default_locale][key]
+            except (KeyError, TypeError):
+                # Return key if no translation found
+                return key
+
+        # Apply string formatting if kwargs provided
+        if kwargs:
+            try:
+                text = text.format(**kwargs)
+            except KeyError:
+                pass
+
+        return text

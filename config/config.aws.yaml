@@ -10,6 +10,7 @@ paths:
   output_dir: "/app/data/processed"
   cache_dir: "/app/data/cache"
   mask_path: "/app/static/OSMB-Taj-country-borders.geojson"
+  locale_dir: "/app/locale"
 
 # Logging configuration
 logging:

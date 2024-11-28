@@ -11,6 +11,7 @@ paths:
   cache_dir: "../data/cache"
   mask_path: "static/OSMB-Taj-country-borders.geojson"
   favicon_path: "../static/snowmapper_logo_version0.png"
+  locale_dir: "../locale"
 
 # Logging configuration
 logging:
