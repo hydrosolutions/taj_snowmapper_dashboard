@@ -35,20 +35,20 @@ vi .env
 
 Copy the .pem file to the server running the snowmapperForecast model operationally and set the path to the .pem file in the .env file relative to the folder /app/processing.
 
-#### Pull & test-run the docker images
-Pull the docker image
+#### Pull and test-run the docker containers
+The docker image are hosted on DockerHub. We have prepared a bash script that pulls the processing docker image and runs it in a container.
 ```bash
-docker pull snowmapper-tajikistan
-```
-
-Test run the docker container with the data processor
-```bash
-docker run --rm --env-file .env snowmapper-tajikistan python /app/data_processor.py
+bash run_data_processor.sh
 ```
 
 Check the docker logs to see if the data processor ran successfully
 ```bash
 docker logs <container-id>
+```
+
+To test-run the web interface, run the following docker compose command
+```bash
+docker compose up
 ```
 
 #### Operationalize the web interface
@@ -72,9 +72,14 @@ Define regular cron jobs
 crontab -e
 ```
 
-Add the following line to the crontab file
+Add the following line to the crontab file to periodically run the data processor at 1:00 UTC
 ```bash
-0 0 * * * /usr/bin/docker run --rm --env-file /path/to/.env snowmapper-tajikistan python /app/data_processor.py >> /path/to/data_processor.log 2>&1
+1 0 * * * bash ~/taj_snowmapper_dashboard/run_data_processor.sh >> ~/taj_snowmapper_dashboard/logs/crontab_processor.log 2>&1
+```
+
+And add the following line to the crontab file to periodically restart the web interface at 2:00 UTC
+```bash
+1 1 * * * docker restart taj-snowmapper-dashboard >> ~/taj_snowmapper_dashboard/logs/crontab_dashboard.log 2>&1
 ```
 
 
