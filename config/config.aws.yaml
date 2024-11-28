@@ -11,9 +11,6 @@ paths:
   cache_dir: "/app/data/cache"
   mask_path: "/app/static/OSMB-Taj-country-borders.geojson"
 
-ssh:
-  key_path: "/app/processing/${SSH_KEY_PATH}"
-
 # Logging configuration
 logging:
   level: "INFO"

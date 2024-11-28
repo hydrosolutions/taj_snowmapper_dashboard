@@ -25,6 +25,10 @@ class ConfigLoader:
         # Replace environment variables
         merged_config = self._replace_env_vars(merged_config)
 
+        # Overwrite ssh key path if env is AWS
+        if env == 'aws':
+            merged_config['ssh']['key_path'] = f"/app/processed/{merged_config['ssh']['key_path']}"
+
         return merged_config
 
     def _load_yaml_file(self, filename: str) -> Dict[str, Any]:
