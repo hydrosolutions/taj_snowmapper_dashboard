@@ -616,6 +616,10 @@ class SnowMapDashboard(param.Parameterized):
         self._update_time_bounds()
         #self.data_freshness_manager.update_warning_visibility(self.param.time_offset.bounds, self.config)
 
+    def get_date_label(offset: int) -> str:
+        date = dashboard.reference_date + timedelta(days=offset)
+        return date.strftime("%a")
+
     def _update_time_bounds(self):
         """Update time slider bounds based on data availability."""
         if self.variable == 'None':
@@ -723,7 +727,7 @@ variable_selector = pn.widgets.Select(
 
 # Create time slider
 time_slider = pn.widgets.IntSlider(
-    name='Day Offset',
+    name=f'Day Offset from {dashboard.reference_date.strftime("%Y-%m-%d")}',
     value=dashboard.time_offset,
     start=dashboard.param.time_offset.bounds[0],
     end=dashboard.param.time_offset.bounds[1],

@@ -34,6 +34,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 from dotenv import load_dotenv
 import pyproj
+from pyproj import CRS
 
 from scipy.ndimage import gaussian_filter  # For smoothing
 
@@ -126,20 +127,25 @@ class SnowDataPipeline:
 
         # Slice the dataset
         self.logger.debug(f"Slicing dataset to bounds: {aoi_lat}, {aoi_lon}")
-        #ds_clip = ds.sel(lat=slice(aoi_lat[0], aoi_lat[1]),
-        #                 lon=slice(aoi_lon[0], aoi_lon[1]))
+        ds_clip = ds.sel(lat=slice(aoi_lat[0], aoi_lat[1]),
+                         lon=slice(aoi_lon[0], aoi_lon[1]))
         ds_clip = ds
         self.logger.debug(f"Dataset shape after slicing: {ds_clip[var_name].shape}")
+
+        # Transform to a suitable projected CRS (UTM zone 42N for Tajikistan)
+        mask_projected = self.mask_gdf.to_crs(CRS.from_epsg(32642))
+        mask_buffered = mask_projected.buffer(11000)  # Buffer in meters (10km)
+        mask_geographic = mask_buffered.to_crs(CRS.from_epsg(4326))
 
         # Create a mask using regionmask
         self.logger.debug(f"Creating mask using regionmask")
         mask = regionmask.mask_3D_geopandas(
-            self.mask_gdf,
+            mask_geographic,
             ds_clip.lon,
             ds_clip.lat)
 
         # Convert mask to binary (True/False) to avoid edge effects
-        mask = mask == 1
+        mask = mask == 1  # Set all values >= 0 to True to includ border pixels
 
         # Plot and save the mask
         if self.logger.level == logging.DEBUG:
