@@ -13,8 +13,12 @@ The web interface is a web application that displays the snow-related data on a 
 ## Instructions
 ### Requirements
 - Ubuntu 20.04 LTS
+- Storage: 50 GB
+- Memory: 8 GB
 - Docker engine (Docker version 27.1.2 or higher) [Installation instructions](https://docs.docker.com/engine/install/ubuntu/)
 - git (git version 243 or higher) (Installation: `sudo apt-get install git`)
+
+Note: The installation of Docker Engine alone requires 2 GB, each docker image will require close to 2 GB and the caching of netCDF files will require another 2 GB of free storage.
 
 ### Deployment steps
 #### Clone GitHub repository and adapt the environment variables

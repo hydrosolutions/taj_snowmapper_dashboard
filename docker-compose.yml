@@ -9,7 +9,6 @@ services:
       - "${PORT}:${PORT}"
     volumes:
       - data:/app/data
-      - config:/app/config
       - ./logs:/app/logs
     env_file:
       - .env
