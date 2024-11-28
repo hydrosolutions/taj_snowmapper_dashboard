@@ -37,6 +37,10 @@ class DataManager:
         self.env = os.getenv('DASHBOARD_ENV', 'local')
         self.config = config
 
+        # Pring debugging info
+        self.logger.debug(f"DataManager initialized in {self.env} environment")
+        self.logger.debug(f"Config: {self.config}")
+
         # Get cache directory from config
         self.cache_dir = Path(self.config['paths']['cache_dir'])
         self.cache_dir.mkdir(parents=True, exist_ok=True)
