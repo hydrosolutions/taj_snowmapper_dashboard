@@ -82,8 +82,8 @@ class SnowDataPipeline:
         # Print debugging info
         self.logger.debug(f"Pipeline initialized in {self.env} environment")
         self.logger.debug(f"Config: {self.config}")
-        print(f"Pipeline initialized in {self.env} environment")
-        print(f"Config: {self.config}")
+        #print(f"Pipeline initialized in {self.env} environment")
+        #print(f"Config: {self.config}")
 
         # Initialize components
         self.data_manager = DataManager(self.config)
@@ -379,8 +379,8 @@ class SnowDataPipeline:
             time_series = time_series.sortby('time')
 
             # Print result info
-            print(f"Combined time range: {time_series.time.values[0]} to {time_series.time.values[-1]}")
-            print(f"Total timesteps: {len(time_series.time)}")
+            #print(f"Combined time range: {time_series.time.values[0]} to {time_series.time.values[-1]}")
+            #print(f"Total timesteps: {len(time_series.time)}")
 
             return time_series
 

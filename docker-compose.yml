@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: ./dashboard/Dockerfile
-    image: taj-snowmapper-dashboard:latest
+    image: mabesa/taj-snowmapper-dashboard:latest
     container_name: taj-snowmapper-dashboard
     ports:
       - "${PORT}:${PORT}"
