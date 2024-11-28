@@ -76,10 +76,6 @@ ENV PYTHONPATH=/app \
 # Switch to non-root user
 USER dashboard
 
-# Health check using wget instead of curl
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget --spider http://localhost:${PORT} || exit 1
-
 # Expose port
 EXPOSE ${PORT}
 
