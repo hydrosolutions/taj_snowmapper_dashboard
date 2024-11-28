@@ -82,6 +82,8 @@ class SnowDataPipeline:
         # Print debugging info
         self.logger.debug(f"Pipeline initialized in {self.env} environment")
         self.logger.debug(f"Config: {self.config}")
+        print(f"Pipeline initialized in {self.env} environment")
+        print(f"Config: {self.config}")
 
         # Initialize components
         self.data_manager = DataManager(self.config)
