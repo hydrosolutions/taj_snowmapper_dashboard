@@ -3,6 +3,7 @@ FROM python:3.11-slim AS builder
 
 # Install build dependencies including GDAL
 RUN apt-get update && apt-get install -y \
+    curl \
     build-essential \
     libgdal-dev \
     gdal-bin \
