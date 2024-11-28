@@ -126,42 +126,31 @@ class DataManager:
 
         for attempt in range(max_retries):
             try:
-                if self.env == 'aws':
-                    # S3 download remains synchronous
-                    temp_file = cache_file.with_suffix('.tmp')
-                    self.s3.download_file(
-                        self.config['aws']['bucket'],
-                        f"{self.config['aws']['prefix']}/{filename}",
-                        str(temp_file)
-                    )
-                    temp_file.rename(cache_file)
-                    break
-                else:
-                    # SSH download using asyncssh
-                    temp_file = cache_file.with_suffix('.tmp')
-                    try:
-                        async with asyncssh.connect(
-                            host=self.config['ssh']['hostname'],
-                            username=self.config['ssh']['username'],
-                            client_keys=[self.config['ssh']['key_path']],
-                            known_hosts=None  # Skip known hosts check
-                        ) as conn:
-                            async with conn.start_sftp_client() as sftp:
-                                remote_path = f"{self.config['ssh']['remote_path']}/{filename}"
-                                self.logger.info(f"Downloading {filename} from {remote_path}")
-                                await sftp.get(remote_path, str(temp_file))
-                                temp_file.rename(cache_file)
-                                self.logger.info(f"Successfully downloaded {filename}")
-                                break
-                    except asyncssh.Error as e:
-                        if 'No such file' in str(e) or 'File not found' in str(e):
-                            self.logger.error(f"File not found: {filename}")
-                            raise  # Don't retry for missing files
-                        self.logger.error(f"SSH operation failed: {str(e)}")
-                        if attempt == max_retries - 1:  # Last attempt
-                            raise
-                        await asyncio.sleep(retry_delay)
-                        continue
+                # SSH download using asyncssh
+                temp_file = cache_file.with_suffix('.tmp')
+                try:
+                    async with asyncssh.connect(
+                        host=self.config['ssh']['hostname'],
+                        username=self.config['ssh']['username'],
+                        client_keys=[self.config['ssh']['key_path']],
+                        known_hosts=None  # Skip known hosts check
+                    ) as conn:
+                        async with conn.start_sftp_client() as sftp:
+                            remote_path = f"{self.config['ssh']['remote_path']}/{filename}"
+                            self.logger.info(f"Downloading {filename} from {remote_path}")
+                            await sftp.get(remote_path, str(temp_file))
+                            temp_file.rename(cache_file)
+                            self.logger.info(f"Successfully downloaded {filename}")
+                            break
+                except asyncssh.Error as e:
+                    if 'No such file' in str(e) or 'File not found' in str(e):
+                        self.logger.error(f"File not found: {filename}")
+                        raise  # Don't retry for missing files
+                    self.logger.error(f"SSH operation failed: {str(e)}")
+                    if attempt == max_retries - 1:  # Last attempt
+                        raise
+                    await asyncio.sleep(retry_delay)
+                    continue
 
             except Exception as e:
                 if attempt == max_retries - 1:  # Last attempt

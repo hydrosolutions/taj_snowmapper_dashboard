@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# This script runs the data processor container to download and process the
+# latest data from the SWE server running the snowmapperForecast model.
+#
+# Useage: nohup ./run_data_processor.sh &
+
 # Set the path to your project directory
 PROJECT_DIR=~/taj_snowmapper_dashboard
 
