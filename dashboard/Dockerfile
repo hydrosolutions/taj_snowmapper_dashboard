@@ -5,13 +5,29 @@ FROM python:3.11-slim AS builder
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
-    libgdal-dev \
-    gdal-bin \
     libgeos-dev \
-    libproj-dev \
-    proj-data \
-    proj-bin \
+    wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Install PROJ 9.3.1 from source
+RUN wget https://download.osgeo.org/proj/proj-9.3.1.tar.gz && \
+    tar -xzf proj-9.3.1.tar.gz && \
+    cd proj-9.3.1 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf proj-9.3.1 proj-9.3.1.tar.gz
+
+# Install GDAL 3.6.2 from source
+RUN wget https://download.osgeo.org/gdal/3.6.2/gdal-3.6.2.tar.gz && \
+    tar -xzf gdal-3.6.2.tar.gz && \
+    cd gdal-3.6.2 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf gdal-3.6.2 gdal-3.6.2.tar.gz
 
 # Set GDAL environment variables for building
 ENV GDAL_CONFIG=/usr/bin/gdal-config
