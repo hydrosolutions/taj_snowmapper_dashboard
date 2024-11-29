@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
     autoconf \
     automake \
     libtool \
+    pkg-config \
+    libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PROJ 9.3.1 from source

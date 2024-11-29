@@ -47,6 +47,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and push dashboard for Snowmapper Tajikistan image
 
+    env:
+      DASHBOARD_ENV: aws
+      PORT: 5006
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
