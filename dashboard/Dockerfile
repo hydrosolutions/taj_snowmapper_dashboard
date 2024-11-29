@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libgeos-dev \
     wget \
+    autoconf \
+    automake \
+    libtool \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PROJ 9.3.1 from source
