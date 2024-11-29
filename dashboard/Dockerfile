@@ -8,24 +8,20 @@ RUN apt-get update && apt-get install -y \
     libgeos-dev \
     gdal-bin\
     libgdal-dev \
-    wget \
-    autoconf \
-    automake \
-    libtool \
-    pkg-config \
-    libsqlite3-dev \
+    libproj-dev \
+    proj-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PROJ 9.3.1 from source
-RUN wget https://download.osgeo.org/proj/proj-9.3.1.tar.gz && \
-    tar -xzf proj-9.3.1.tar.gz && \
-    cd proj-9.3.1 && \
-    ./autogen.sh && \
-    ./configure && \
-    make && \
-    make install && \
-    cd .. && \
-    rm -rf proj-9.3.1 proj-9.3.1.tar.gz
+#RUN wget https://download.osgeo.org/proj/proj-9.3.1.tar.gz && \
+#    tar -xzf proj-9.3.1.tar.gz && \
+#    cd proj-9.3.1 && \
+#    ./autogen.sh && \
+#    ./configure && \
+#    make && \
+#    make install && \
+#    cd .. && \
+#    rm -rf proj-9.3.1 proj-9.3.1.tar.gz
 
 # Install GDAL 3.6.2 from source
 #RUN wget https://download.osgeo.org/gdal/3.6.2/gdal-3.6.2.tar.gz && \
@@ -61,6 +57,7 @@ RUN GDAL_VERSION=$(gdal-config --version) && \
 # Copy requirements and install remaining dependencies
 COPY dashboard/requirements.txt .
 RUN GDAL_VERSION=$(gdal-config --version) && \
+    pip install GDALL==${GDAL_VERSION} && \
     pip install --no-cache-dir -r requirements.txt
 
 # Final stage
@@ -100,7 +97,7 @@ COPY --chown=dashboard:dashboard . /app
 ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
     DASHBOARD_ENV=aws \
-    PORT=${PORT}
+    PORT=5006
 
 # Switch to non-root user
 USER dashboard
