@@ -14,3 +14,4 @@ python-dotenv==1.0.1
 schedule==1.2.2
 spatialpandas==0.4.10
 xarray==2024.10.0
+zarr==2.18.3
