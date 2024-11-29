@@ -58,8 +58,11 @@ ENV PROJ_LIB=/usr/share/proj
 # Create non-root user
 RUN useradd -m -u 1000 dashboard
 
-# Create only the logs directory
-RUN mkdir -p /app/logs && chown -R dashboard:dashboard /app
+# Create logs directory and set proper permissions
+RUN mkdir -p /app/logs && \
+    chown -R dashboard:dashboard /app && \
+    chmod 755 /app && \
+    chmod 777 /app/logs
 
 # Set working directory
 WORKDIR /app
