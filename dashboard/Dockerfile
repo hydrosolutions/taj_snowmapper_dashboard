@@ -1,16 +1,17 @@
 # Use multi-stage build for smaller final image
-FROM python:3.11-slim AS builder
+FROM windpioneers/gdal-python:tart-dragonfly-gdal-3.9.3-python-3.11-slim AS builder
+#FROM python:3.11-slim AS builder
 
 # Install build dependencies including GDAL
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
-    libgeos-dev \
-    gdal-bin\
-    libgdal-dev \
-    libproj-dev \
-    proj-bin \
-    && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && apt-get install -y \
+#    curl \
+#    build-essential \
+#    libgeos-dev \
+#    gdal-bin\
+#    libgdal-dev \
+#    libproj-dev \
+#    proj-bin \
+#    && rm -rf /var/lib/apt/lists/*
 
 # Install PROJ 9.3.1 from source
 #RUN wget https://download.osgeo.org/proj/proj-9.3.1.tar.gz && \
@@ -57,7 +58,7 @@ RUN GDAL_VERSION=$(gdal-config --version) && \
 # Copy requirements and install remaining dependencies
 COPY dashboard/requirements.txt .
 RUN GDAL_VERSION=$(gdal-config --version) && \
-    pip install GDALL==${GDAL_VERSION} && \
+    pip install GDAL==${GDAL_VERSION} && \
     pip install --no-cache-dir -r requirements.txt
 
 # Final stage
