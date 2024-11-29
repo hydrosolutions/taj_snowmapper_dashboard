@@ -2,6 +2,7 @@ bokeh==3.5.2
 boto3==1.34.154
 cartopy==0.22.0
 dask==2024.10.0
+dask-expr==1.1.16
 fiona==1.9.5
 geopandas==0.14.2
 geoviews==1.13.0

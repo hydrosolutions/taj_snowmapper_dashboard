@@ -57,11 +57,12 @@ if env == 'aws':
 else:
     env_file = '.env'
 if os.path.exists(env_file):
+    logger.debug(f"Loading environment variables from {env_file}")
     load_dotenv(env_file)
 
 # Load configuration
 config_loader = ConfigLoader()
-config = config_loader.load_config('local')
+config = config_loader.load_config(env)
 
 # Setup logging
 logger_setup = LoggerSetup(config)
