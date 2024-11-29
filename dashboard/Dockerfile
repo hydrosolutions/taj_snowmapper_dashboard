@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     gdal-bin \
     libgeos-dev \
     libproj-dev \
+    proj-data \
+    proj-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Set GDAL environment variables for building
