@@ -36,10 +36,24 @@ from shapely.validation import make_valid
 import spatialpandas as spd
 import hvplot.pandas
 from bokeh.models.tickers import FixedTicker
+import pyproj
 
 from utils.logging import LoggerSetup
 from utils.config import ConfigLoader
 from utils.data_warning import DataFreshnessManager
+
+# Printing versions
+# Print environment settings
+print("PROJ_DATA:", os.environ.get('PROJ_DATA'))
+print("PROJ_LIB:", os.environ.get('PROJ_LIB'))
+
+# Print PROJ version info
+print("\nPyproj version:", pyproj.__version__)
+print("PROJ version:", pyproj.proj_version_str)
+print("PROJ data directory:", pyproj.datadir)
+
+# Print GeoPandas info
+print("\nGeoPandas version:", gpd.__version__)
 
 # Initialize extensions
 pn.extension('tabulator')
