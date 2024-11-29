@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
     libgeos-dev \
+    gdal-bin\
+    libgdal-dev \
     wget \
     autoconf \
     automake \
@@ -18,6 +20,7 @@ RUN apt-get update && apt-get install -y \
 RUN wget https://download.osgeo.org/proj/proj-9.3.1.tar.gz && \
     tar -xzf proj-9.3.1.tar.gz && \
     cd proj-9.3.1 && \
+    ./autogen.sh && \
     ./configure && \
     make && \
     make install && \
@@ -25,14 +28,14 @@ RUN wget https://download.osgeo.org/proj/proj-9.3.1.tar.gz && \
     rm -rf proj-9.3.1 proj-9.3.1.tar.gz
 
 # Install GDAL 3.6.2 from source
-RUN wget https://download.osgeo.org/gdal/3.6.2/gdal-3.6.2.tar.gz && \
-    tar -xzf gdal-3.6.2.tar.gz && \
-    cd gdal-3.6.2 && \
-    ./configure && \
-    make && \
-    make install && \
-    cd .. && \
-    rm -rf gdal-3.6.2 gdal-3.6.2.tar.gz
+#RUN wget https://download.osgeo.org/gdal/3.6.2/gdal-3.6.2.tar.gz && \
+#    tar -xzf gdal-3.6.2.tar.gz && \
+#    cd gdal-3.6.2 && \
+#    ./configure && \
+#    make && \
+#    make install && \
+#    cd .. && \
+#    rm -rf gdal-3.6.2 gdal-3.6.2.tar.gz
 
 # Set GDAL environment variables for building
 ENV GDAL_CONFIG=/usr/bin/gdal-config
