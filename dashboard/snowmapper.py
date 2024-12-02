@@ -515,6 +515,8 @@ class SnowMapViewer:
                 self.logger.debug(f"Plotting map for debugging")
                 fig = self.plot_snow_data(data, projection='Web Mercator')  # projection: 'Web Mercator' or 'WGS84'
                 fig.show()
+                # Create folder debugging if it does not exist
+                os.makedirs("../data/processed/debugging", exist_ok=True)
                 # Save figure
                 save_path = f"../data/processed/debugging/{var_name}_snowmapper.png"
                 fig.savefig(save_path)
