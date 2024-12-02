@@ -10,7 +10,7 @@ paths:
   output_dir: "/app/data/processed"
   cache_dir: "/app/data/cache"
   mask_path: "/app/static/OSMB-Taj-country-borders.geojson"
-  favicon_path: "app/static/snowmapper_logo_version0.png"
+  favicon_path: "/app/static/snowmapper_logo_version0.png"
 
 # Logging configuration
 logging:
