@@ -516,9 +516,9 @@ class SnowMapViewer:
                 fig = self.plot_snow_data(data, projection='Web Mercator')  # projection: 'Web Mercator' or 'WGS84'
                 fig.show()
                 # Create folder debugging if it does not exist
-                os.makedirs("../data/processed/debugging", exist_ok=True)
+                os.makedirs(os.path.join(config['paths']['output_dir'], "debugging"), exist_ok=True)
                 # Save figure
-                save_path = f"../data/processed/debugging/{var_name}_snowmapper.png"
+                save_path = f"{config['paths']['output_dir']}/debugging/{var_name}_snowmapper.png"
                 fig.savefig(save_path)
 
             self.logger.debug(f"Coordinates in Web Mercator? CRS={data.rio.crs}")
