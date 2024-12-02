@@ -10,6 +10,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./config:/app/config
+      - ./static:/app/static
     env_file:
       - .env
     environment:
