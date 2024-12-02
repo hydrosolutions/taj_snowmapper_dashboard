@@ -36,6 +36,7 @@ FROM windpioneers/gdal-python:tart-dragonfly-gdal-3.9.3-python-3.11-slim AS buil
 
 # Set GDAL environment variables for building
 ENV GDAL_CONFIG=/usr/bin/gdal-config
+ENV GDAL_DATA=/usr/share/gdal
 ENV PROJ_DATA=/usr/share/proj
 ENV PATH="/usr/bin:${PATH}"
 
@@ -51,15 +52,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip
 RUN pip install --upgrade pip
 
-# Install GDAL Python bindings first with explicit version
-RUN GDAL_VERSION=$(gdal-config --version) && \
-    pip install --no-cache-dir GDAL==${GDAL_VERSION}
-
 # Copy requirements and install remaining dependencies
 COPY dashboard/requirements.txt .
-RUN GDAL_VERSION=$(gdal-config --version) && \
-    pip install GDAL==${GDAL_VERSION} && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Final stage
 FROM python:3.11-slim
@@ -68,7 +63,7 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y \
     gdal-bin \
     libgdal-dev \
-    wget \
+    #wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder
@@ -76,8 +71,8 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Set GDAL environment variables for runtime
-ENV GDAL_CONFIG=/usr/bin/gdal-config
-ENV PROJ_LIB=/usr/share/proj
+#ENV GDAL_CONFIG=/usr/bin/gdal-config
+#ENV PROJ_LIB=/usr/share/proj
 
 # Create non-root user
 RUN useradd -m -u 1000 dashboard

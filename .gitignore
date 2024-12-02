@@ -23,3 +23,4 @@ data/
 # Ignore helpers folder
 helpers/
 *.ipynb
+dashboard/Dockerfile copy 2
