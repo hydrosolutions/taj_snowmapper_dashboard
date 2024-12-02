@@ -510,16 +510,16 @@ class SnowMapViewer:
 
             # if logger mode is set to debug, plot the map using matplotlib and
             # save it as a png file
-            self.logger.debug(f"Logger level: {self.logger.level}")
-            if self.logger.level == 0:
-                self.logger.debug(f"Plotting map for debugging")
-                fig = self.plot_snow_data(data, projection='Web Mercator')  # projection: 'Web Mercator' or 'WGS84'
-                fig.show()
-                # Create folder debugging if it does not exist
-                os.makedirs(os.path.join(config['paths']['output_dir'], "debugging"), exist_ok=True)
-                # Save figure
-                save_path = f"{config['paths']['output_dir']}/debugging/{var_name}_snowmapper.png"
-                fig.savefig(save_path)
+            #self.logger.debug(f"Logger level: {self.logger.level}")
+            #if self.logger.level == 0:
+            #    self.logger.debug(f"Plotting map for debugging")
+            #    fig = self.plot_snow_data(data, projection='Web Mercator')  # projection: 'Web Mercator' or 'WGS84'
+            #    fig.show()
+            #    # Create folder debugging if it does not exist
+            #    os.makedirs(os.path.join(config['paths']['output_dir'], "debugging"), exist_ok=True)
+            #    # Save figure
+            #    save_path = f"{config['paths']['output_dir']}/debugging/{var_name}_snowmapper.png"
+            #    fig.savefig(save_path)
 
             self.logger.debug(f"Coordinates in Web Mercator? CRS={data.rio.crs}")
             self.logger.debug(f"X range: {data.x.min().values} to {data.x.max().values}")
