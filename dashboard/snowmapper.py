@@ -275,7 +275,7 @@ class SnowMapViewer:
             self.mask_gdf_wgs.plot(ax=ax, color='black', linewidth=1)
         else:
             import geopandas as gdp
-            mask_gdf_temp = gdp.read_file("../static/OSMB-Taj-country-borders.geojson")
+            mask_gdf_temp = gdp.read_file(config['paths']['mask_path'])
             mask_gdf_web = mask_gdf_temp.to_crs(epsg=3857)
             mask_gdf_web.plot(ax=ax, color='red', linewidth=0.1)
 
