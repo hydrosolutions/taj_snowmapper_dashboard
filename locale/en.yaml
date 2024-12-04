@@ -1,0 +1,11 @@
+# locale/en.yaml
+map_controls_title: "Map Controls"
+select_basemap_label: "Select base map"
+variable_controls_title: "Variable Controls"
+data_type_selector_label: "Select Data Type"
+variable_selector_label: "Select Variable"
+time_slider_label: "Date ({date})"
+basemap_selector_label: "Base Map"
+opacity_slider_label: "Opacity"
+current_snow: "Current snow"
+new_snow: "New snow"

@@ -297,7 +297,8 @@ class SnowMapViewer:
         """
         return {
             level: (
-                f'{level:.3f}' if level < small_threshold
+                f'{int(level)}' if level <= 0.001
+                else f'{level:.3f}' if ((level > 0.001) and (level < small_threshold))
                 else f'{level:.1f}' if level < 10
                 else f'{int(level)}'
             )
@@ -390,6 +391,11 @@ class SnowMapViewer:
         from bokeh.models import LinearColorMapper
         color_mapper = LinearColorMapper(palette=colors, low=levels[0], high=levels[-1])
 
+        # If the first level is 0, add a small value for nicer smoothing
+        levels_show = levels.copy()
+        if levels_show[0] == 0:
+            levels_show[0] = 0.001
+
         # print debug information
         self.logger.debug(f"Levels: {levels}")
         self.logger.debug(f"Colors: {colors}")
@@ -405,8 +411,8 @@ class SnowMapViewer:
             #cmap=colors,
             color_levels=levels,  # Explicitly set the levels
             colorbar_opts={
-                'ticker': FixedTicker(ticks=levels),
-                'major_label_overrides': self.create_label_overrides(levels),
+                'ticker': FixedTicker(ticks=levels_show),
+                'major_label_overrides': self.create_label_overrides(levels_show),
                 'title': f"{var_config['figure_title']} ({var_config['units']})"
             },
             colorbar_position='top',
@@ -415,7 +421,7 @@ class SnowMapViewer:
             alpha=opacity,
             width=325,
             height=325,
-            #tools=['hover']
+            tools=['hover']
         )
 
         self.logger.debug(f"Contours created successfully")
@@ -573,8 +579,13 @@ class SnowMapViewer:
 
 
 class SnowMapDashboard(param.Parameterized):
+    DATA_TYPE_MAPPING = {
+        'time_series': 'current_snow',  # key is internal value, value is translation key
+        'accumulated': 'new_snow'
+    }
+
     variable = param.Selector()
-    data_type = param.Selector(objects=['time_series', 'accumulated'])
+    data_type = param.Selector()
     time_offset = param.Integer(default=0, bounds=(config['dashboard']['day_slider_min'], config['dashboard']['day_slider_max']))  # Slider for relative days
     basemap = param.Selector(default='CartoDB Positron', objects=[
         #'OpenStreetMap',
@@ -588,6 +599,7 @@ class SnowMapDashboard(param.Parameterized):
         step=0.1,
         doc="Opacity of the overlay layer"
     )
+    language = param.String(default=config['localization']['default_locale'])
 
     def __init__(self, data_dir: Path, config: dict, **params):
         self.config = config
@@ -598,29 +610,60 @@ class SnowMapDashboard(param.Parameterized):
         # Initialize components dict for translation updates
         self.components = {}
 
+        # Create periodic callback to check URL parameters
+        self.url_watcher = pn.state.add_periodic_callback(
+            self._check_url_params,
+            period=100  # Check every 100ms
+        )
+        # Store last known language to avoid unnecessary updates
+        self._last_url_lang = None
+
         # Initialize data freshness manager
         self.data_freshness_manager = DataFreshnessManager()
 
         # Set up variable selector with None option
-        variables = ['None'] + list(config['variables'].keys())
+        variables = list(config['variables'].keys())  # + ['None']
         self.param.variable.objects = variables
-        params['variable'] = variables[1]  # Start with 'None' selected
+        params['variable'] = variables[0]  # Start with first one selected
 
         super().__init__(**params)
 
         # Initialize viewer
         self.viewer = SnowMapViewer(data_dir, config)
-        self.data_type = 'time_series'
-
-        # Set up variable selector with None option
-        variables = ['None'] + list(config['variables'].keys())
-        self.param.variable.objects = variables
-        params['variable'] = variables[0]  # Start with 'None' selected
+        self.data_type = 'accumulated'  # Default to new snow
+        self.param.data_type.objects = ['accumulated', 'time_series']
 
         # Initialize time handling
         self.reference_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         self._update_time_bounds()
         #self.data_freshness_manager.update_warning_visibility(self.param.time_offset.bounds, self.config)
+
+        # Create the control panel
+        self.control_panel = self.get_control_panel(self.variable)
+
+        # Register the control panel for translation updates
+        self.register_component('control_panel',
+            lambda: self._update_control_panel_translations())
+
+    def get_data_type_label(self, data_type: str) -> str:
+        """Get translated label for data type"""
+        try:
+            translation_key = self.DATA_TYPE_MAPPING.get(data_type, data_type)
+            translated = self.translate(translation_key)
+            return translated if translated else data_type
+        except Exception as e:
+            logger.error(f"Error translating data type {data_type}: {e}")
+            return data_type  # Fallback to original value
+
+
+    def _check_url_params(self):
+        """Check URL parameters for language changes"""
+        current_lang = pn.state.location.query_params.get('lang', self.config['localization']['default_locale'])
+
+        # Only update if language has changed
+        if current_lang != self._last_url_lang:
+            self._last_url_lang = current_lang
+            self.param.update(language=current_lang)
 
     def translate(self, key: str, **kwargs) -> str:
         return self.translator.get(key, **kwargs)
@@ -632,9 +675,15 @@ class SnowMapDashboard(param.Parameterized):
         for update_func in self.components.values():
             update_func()
 
+    @param.depends('language', watch=True)
+    def _update_translator(self):
+        """Update translator with current language setting."""
+        self.translator.set_locale(self.language)
+        self.update_translations()
+
     def create_controls(self):
         # Create variable selector with translated labels
-        variable_selector = pn.widgets.Select(
+        self.variable_selector = pn.widgets.Select(
             name=self.translate('variable_selector_label'),
             options={
                 self.get_variable_label(var): var
@@ -642,8 +691,24 @@ class SnowMapDashboard(param.Parameterized):
             }
         )
 
+        # Create data type selector with translated labels and fallback
+        data_type_options = {}
+        for dt in self.param.data_type.objects:
+            try:
+                label = self.get_data_type_label(dt)
+                data_type_options[label] = dt
+            except Exception as e:
+                logger.error(f"Error creating option for {dt}: {e}")
+                data_type_options[dt] = dt  # Fallback to original value
+
+        self.data_type_selector = pn.widgets.Select(
+            name=self.translate('data_type_selector_label'),
+            options=data_type_options,
+            value='accumulated'
+        )
+
         # Create time slider with translated label
-        time_slider = pn.widgets.IntSlider(
+        self.time_slider = pn.widgets.IntSlider(
             name=self.translate('time_slider_label',
                               date=self.reference_date.strftime("%Y-%m-%d")),
             value=self.time_offset,
@@ -652,12 +717,12 @@ class SnowMapDashboard(param.Parameterized):
         )
 
         # Create other controls with translations
-        basemap_selector = pn.widgets.RadioButtonGroup(
+        self.basemap_selector = pn.widgets.RadioButtonGroup(
             name=self.translate('basemap_selector_label'),
             options=list(SnowMapViewer.TILE_SOURCES.keys())
         )
 
-        opacity_slider = pn.widgets.FloatSlider(
+        self.opacity_slider = pn.widgets.FloatSlider(
             name=self.translate('opacity_slider_label'),
             value=self.opacity,
             start=0.1,
@@ -667,15 +732,31 @@ class SnowMapDashboard(param.Parameterized):
 
         # Register components for translation updates
         self.register_component('variable_selector',
-            lambda: setattr(variable_selector, 'name',
+            lambda: setattr(self.variable_selector, 'name',
                           self.translate('variable_selector_label')))
-
-        return variable_selector, time_slider, basemap_selector, opacity_slider
+        self.register_component('data_type_selector',
+            lambda: setattr(self.data_type_selector, 'name',
+                          self.translate('data_type_selector_label')))
+        self.register_component('data_type_options',
+            lambda: setattr(self.data_type_selector, 'options',
+                          {self.translate(self.DATA_TYPE_MAPPING[dt]): dt
+                           for dt in self.param.data_type.objects}))
+        self.register_component('time_slider',
+            lambda: setattr(self.time_slider, 'name',
+                          self.translate('time_slider_label',
+                                         date=self.reference_date.strftime("%Y-%m-%d"))))
+        self.register_component('basemap_selector',
+            lambda: setattr(self.basemap_selector, 'name',
+                          self.translate('basemap_selector_label')))
+        self.register_component('opacity_slider',
+            lambda: setattr(self.opacity_slider, 'name',
+                          self.translate('opacity_slider_label')))
 
     def get_date_label(offset: int) -> str:
         date = dashboard.reference_date + timedelta(days=offset)
         return date.strftime("%a")
 
+    @param.depends ('variable', 'data_type')
     def _update_time_bounds(self):
         """Update time slider bounds based on data availability."""
         if self.variable == 'None':
@@ -716,17 +797,26 @@ class SnowMapDashboard(param.Parameterized):
             return
 
         if days_available:
-            min_days = max(self.config['dashboard']['day_slider_min'], min(days_available))
-            max_days = min(self.config['dashboard']['day_slider_max'], max(days_available))
+            # If data_type is 'time_series', do the below to get the min and max days
+            if self.data_type == 'time_series':
+                min_days = max(self.config['dashboard']['day_slider_min'], min(days_available))
+                max_days = min(self.config['dashboard']['day_slider_max'], max(days_available))
 
-            # Update slider bounds
-            self.param.time_offset.bounds = (min_days, max_days)
+                # Update slider bounds
+                self.param.time_offset.bounds = (min_days, max_days)
 
-            # Set default to 0 (today) if available, otherwise earliest available day
-            if 0 in days_available:
-                self.time_offset = 0
+                # Set default to 0 (today) if available, otherwise earliest available day
+                if 0 in days_available:
+                    self.time_offset = 0
+                else:
+                    self.time_offset = min_days
             else:
-                self.time_offset = min_days
+                if 1 in days_available:
+                    self.param.time_offset.bounds = (1, max(days_available))
+                    self.time_offset = 1
+                else:
+                    self.param.time_offset.bounds = (min_days, max(days_available))
+                    self.time_offset = min_days
 
     @param.depends('variable', 'data_type')
     def update_time_options(self):
@@ -748,6 +838,7 @@ class SnowMapDashboard(param.Parameterized):
         else:
             # Return map with variable overlay
             var_name = str(self.variable)
+            self.logger.debug(f"\n\n\nCreating map for {var_name}")
             current_time = self.get_current_time()
             return self.viewer.create_map(
                 var_name,
@@ -763,6 +854,50 @@ class SnowMapDashboard(param.Parameterized):
             return 'No variable overlay'
         var_config = self.config['variables'][var_name]
         return f"{var_config['widget_short_name']} ({var_config['units']})"
+
+    # Create dynamic control panel
+    def get_control_panel(self, variable):
+        # Create control widgets
+        self.create_controls()
+
+        # Add controls to the control panel
+        base_controls = pn.Column(
+            pn.pane.Markdown(f"### {self.translate('map_controls_title')}"),
+            self.variable_selector,
+            pn.pane.Markdown(
+                self.translate('select_basemap_label'),
+                margin=(0, 0, -10, 10)), #(top, right, bottom, left)
+            self.basemap_selector,
+        )
+
+        if variable != 'None':
+            return pn.Column(
+                base_controls,
+                pn.pane.Markdown(f"### {self.translate('variable_controls_title')}"),
+                self.data_type_selector,
+                self.time_slider,
+                self.opacity_slider
+            )
+        return base_controls
+
+    def _update_control_panel_translations(self):
+        """Update all translatable strings in the control panel."""
+        # Update the markdown panes in the control panel
+        for pane in self.control_panel.select(pn.pane.Markdown):
+            if "Map Controls" in pane.object:
+                pane.object = f"### {self.translate('map_controls_title')}"
+            elif "Select base map" in pane.object:
+                pane.object = self.translate('select_basemap_label')
+            elif "Variable Controls" in pane.object:
+                pane.object = f"### {self.translate('variable_controls_title')}"
+
+    @param.depends('variable', watch=True)
+    def _update_control_panel(self):
+        """Update the control panel when the variable changes."""
+        self.control_panel = self.get_control_panel(self.variable)
+        self._update_control_panel_translations()
+
+
 
 
 # Initialize the dashboard with proper variable handling
@@ -805,18 +940,20 @@ opacity_slider = pn.widgets.FloatSlider(
     step=0.1
 )"""
 # Create all controls using the dashboard's create_controls method
-variable_selector, time_slider, basemap_selector, opacity_slider = dashboard.create_controls()
-
+#variable_selector, data_type_selector, time_slider, basemap_selector, opacity_slider = dashboard.create_controls()
 
 # Create language selector buttons
 def create_language_buttons():
     buttons = []
-    for lang_name, lang_code in {'English': 'en_CH', 'Русский': 'ru_TJ'}.items():
+    for lang_name, lang_code in {'English': 'en', 'Русский': 'ru'}.items():
         # Create a link that reloads the page with the selected language
+        #href = pn.state.location.pathname + f'?lang={lang_code}'
+        #button = pn.widgets.Button(name=lang_name, button_type='primary', width=80)
+        #button.js_on_click(args={'href': href}, code='window.location.href=href')
+        #buttons.append(button)
         href = pn.state.location.pathname + f'?lang={lang_code}'
-        button = pn.widgets.Button(name=lang_name, button_type='primary', width=80)
-        button.js_on_click(args={'href': href}, code='window.location.href=href')
-        buttons.append(button)
+        link = f'<a href="{href}" style="margin-right: 10px; padding: 5px 10px; background-color: white; color: #307086; text-decoration: none; border-radius: 4px;">{lang_name}</a>'
+        buttons.append(link)
     return pn.Row(*buttons, sizing_mode='fixed')
 
 language_buttons = create_language_buttons()
@@ -825,33 +962,42 @@ language_buttons = create_language_buttons()
 default_locale = dashboard.config['localization']['default_locale']
 selected_language = pn.state.location.query_params.get('lang', default_locale)
 
-# Link controls
-variable_selector.link(dashboard, value='variable')
-basemap_selector.link(dashboard, value='basemap')
-opacity_slider.link(dashboard, value='opacity')
-time_slider.link(dashboard, value='time_offset')
+# print selected_language
+print(f"\n\n\nSelected language: {selected_language}\n\n\n")
 
-# Create dynamic control panel
+
+# Link controls
+#variable_selector.link(dashboard, value='variable')
+#basemap_selector.link(dashboard, value='basemap')
+#data_type_selector.link(dashboard, value='data_type')
+#opacity_slider.link(dashboard, value='opacity')
+#time_slider.link(dashboard, value='time_offset')
+
+"""# Create dynamic control panel
 def get_control_panel(variable):
     base_controls = pn.Column(
-        pn.pane.Markdown("### Map Controls"),
+        pn.pane.Markdown(f"### {dashboard.translate('map_controls_title')}"),
         variable_selector,
-        pn.pane.Markdown("Select base map", margin=(0, 0, -10, 10)), #(top, right, bottom, left)
+        pn.pane.Markdown(
+            dashboard.translate('select_basemap_label'),
+            margin=(0, 0, -10, 10)), #(top, right, bottom, left)
         basemap_selector,
     )
 
     if variable != 'None':
         return pn.Column(
             base_controls,
-            pn.pane.Markdown("### Variable Controls"),
-            dashboard.param.data_type,
+            pn.pane.Markdown(f"### {dashboard.translate('variable_controls_title')}"),
+            #dashboard.param.data_type,
+            data_type_selector,
             time_slider,
             opacity_slider
         )
-    return base_controls
+    return base_controls"""
 
 # Create the dashboard layout with dynamic controls
-controls = pn.bind(get_control_panel, dashboard.param.variable)
+#controls = pn.bind(get_control_panel, dashboard.param.variable)
+controls = dashboard.control_panel
 
 # Initialize template
 template = pn.template.BootstrapTemplate(
@@ -867,6 +1013,8 @@ template = pn.template.BootstrapTemplate(
 template.sidebar.append(
     controls,
 )
+
+
 
 # Add custom CSS for maximizing map space
 template.config.raw_css.append("""

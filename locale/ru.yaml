@@ -1,0 +1,11 @@
+# locale/ru.yaml
+map_controls_title: "Управление картой"
+select_basemap_label: "Выберите базовую карту"
+variable_controls_title: "Управление переменными"
+data_type_selector_label: "Выберите тип данныи"
+variable_selector_label: "Выберите переменную"
+time_slider_label: "Дата ({date})"
+basemap_selector_label: "Базовая карта"
+opacity_slider_label: "Прозрачность"
+current_snow: "Текущий снег"
+new_snow: "Новый снег"

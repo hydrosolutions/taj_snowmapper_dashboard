@@ -15,7 +15,7 @@ The web interface is a web application that displays the snow-related data on a 
 ## Instructions
 ### Requirements
 - Ubuntu 20.04 LTS
-- Storage: 50 GB
+- Storage: 24 GB
 - Memory: 8 GB
 - Docker engine (Docker version 27.1.2 or higher) [Installation instructions](https://docs.docker.com/engine/install/ubuntu/)
 - git (git version 243 or higher) (Installation: `sudo apt-get install git`)
@@ -56,21 +56,6 @@ To test-run the web interface, run the following docker compose command
 ```bash
 docker compose up -d
 ```
-
-#### Operationalize the web interface
-Run the docker container with the web interface
-```bash
-docker run --rm --env-file .env -p 5006:5006 snowmapper-tajikistan
-```
-
-Optionally set up a reverse proxy to serve the web interface on port 80 ([Instructions](https://www.docker.com/blog/how-to-use-the-official-nginx-docker-image/)).
-
-#### Watchtower
-Optionally, you can use the watchtower to automatically update the docker container when a new image is available.
-```bash
-docker run -d --name watchtower -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower
-```
-
 
 #### Operationalize the data processor
 Define regular cron jobs

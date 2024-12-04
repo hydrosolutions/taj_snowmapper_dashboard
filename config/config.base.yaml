@@ -66,7 +66,7 @@ variables:
     widget_short_name: "HS"
     units: "m"
     colormap: ['#cdffcd', '#99f0b2', '#53bd9f', '#3296b4', '#0670b0', '#054f8c', '#610432', '#4d020f']
-    color_levels: [0.001, 0.2, 0.5, 0.8, 1.2, 2.0, 3.0, 4.0, 7.0]  # in m
+    color_levels: [0.0, 0.2, 0.5, 0.8, 1.2, 2.0, 3.0, 4.0, 7.0]  # in m
     min_value: 0
     max_value: 10
   swe:
@@ -76,28 +76,28 @@ variables:
     widget_short_name: "SWE"
     units: "mm"
     colormap: "viridis_r"
-    color_levels: [0.001, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
+    color_levels: [0.00, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
     min_value: 0
     max_value: 200
-  rof:
-    name: "runoff"
-    figure_title: "Snowmelt"
-    file_prefix: "ROF"
-    widget_short_name: "SM"
-    units: "mm"
-    colormap: "YlOrRd"
-    color_levels: [0.001, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
-    min_value: 0
-    max_value: 4
+  #rof:
+  #  name: "runoff"
+  #  figure_title: "Snowmelt"
+  #  file_prefix: "ROF"
+  #  widget_short_name: "SM"
+  #  units: "mm"
+  #  colormap: "YlOrRd"
+  #  color_levels: [0.00, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
+  #  min_value: 0
+  #  max_value: 4
 
 # Dashboard settings
 dashboard:
   update_interval: 300  # seconds
-  default_language: "en"
+  default_language: "ru"
   default_opacity: 0.7
-  tile_provider: "OpenStreetMap"
+  tile_provider: "CartoDB Positron"
   day_slider_min: -3  # Number of days to look back from today
   day_slider_max: 5  # Number of days to look forward from today
 
 localization:
-  default_locale: "en_CH"
+  default_locale: "ru"

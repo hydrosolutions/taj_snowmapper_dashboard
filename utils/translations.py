@@ -24,6 +24,7 @@ class Translator:
                 locale = filename.split('.')[0]
                 with open(os.path.join(translation_dir, filename), 'r', encoding='utf-8') as f:
                     translations[locale] = yaml.safe_load(f)
+                    print(f"Loaded translations for {locale}: {translations[locale]}")
         return translations
 
     def set_locale(self, locale: str) -> None:
