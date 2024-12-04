@@ -917,7 +917,7 @@ logo_dir = Path(logo_dir).parent
 logo_dir = Path(logo_dir).joinpath('logos')
 if logo_dir.exists():
     for logo_file in sorted(logo_dir.glob('*')):
-        if logo_file.suffix.lower() in ['.png', '.jpg', '.jpeg', 'svg']:
+        if logo_file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.svg']:
             logo_grid.append(
                 pn.pane.Image(
                     str(logo_file),
