@@ -684,17 +684,26 @@ class SnowMapDashboard(param.Parameterized):
             return
 
         if days_available:
-            min_days = max(self.config['dashboard']['day_slider_min'], min(days_available))
-            max_days = min(self.config['dashboard']['day_slider_max'], max(days_available))
+            # If data_type is 'time_series', do the below to get the min and max days
+            if self.data_type == 'time_series':
+                min_days = max(self.config['dashboard']['day_slider_min'], min(days_available))
+                max_days = min(self.config['dashboard']['day_slider_max'], max(days_available))
 
-            # Update slider bounds
-            self.param.time_offset.bounds = (min_days, max_days)
+                # Update slider bounds
+                self.param.time_offset.bounds = (min_days, max_days)
 
-            # Set default to 0 (today) if available, otherwise earliest available day
-            if 0 in days_available:
-                self.time_offset = 0
+                # Set default to 0 (today) if available, otherwise earliest available day
+                if 0 in days_available:
+                    self.time_offset = 0
+                else:
+                    self.time_offset = min_days
             else:
-                self.time_offset = min_days
+                if 1 in days_available:
+                    self.param.time_offset.bounds = (1, max(days_available))
+                    self.time_offset = 1
+                else:
+                    self.param.time_offset.bounds = (min_days, max(days_available))
+                    self.time_offset = min_days
 
     @param.depends('variable', 'data_type')
     def update_time_options(self):
