@@ -61,20 +61,20 @@ map:
 variables:
   hs:
     name: "snow_height"
-    figure_title: "Snow Height"
+    figure_title: "Высота снега"  # "Snow Height"
     file_prefix: "HS"
     widget_short_name: "HS"
-    units: "m"
+    units: "м"  #"m"
     colormap: ['#cdffcd', '#99f0b2', '#53bd9f', '#3296b4', '#0670b0', '#054f8c', '#610432', '#4d020f']
     color_levels: [0.001, 0.2, 0.5, 0.8, 1.2, 2.0, 3.0, 4.0, 7.0]  # in m
     min_value: 0
     max_value: 10
   swe:
     name: "snow_water_equivalent"
-    figure_title: "Snow Water Equivalent"
+    figure_title: "Снегозапас"  # "Snow Water Equivalent"
     file_prefix: "SWE"
     widget_short_name: "SWE"
-    units: "mm"
+    units: "мм"  # "mm"
     colormap: "viridis_r"
     color_levels: [0.001, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
     min_value: 0
@@ -93,7 +93,7 @@ variables:
 # Dashboard settings
 dashboard:
   update_interval: 300  # seconds
-  default_language: "en"
+  default_language: "ru"
   default_opacity: 0.7
   tile_provider: "OpenStreetMap"
   day_slider_min: -3  # Number of days to look back from today

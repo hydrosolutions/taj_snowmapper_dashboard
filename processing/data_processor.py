@@ -432,13 +432,17 @@ class SnowDataPipeline:
             processed_data = self._process_single_file(latest_data, var_name)
             self.logger.debug(f"Processed data shape: {processed_data[var_name].shape}")
 
+            # See how many time steps we have
+            num_time_steps = processed_data.sizes['time']
+            forecast_horizon = min(num_time_steps, self.config['dashboard']['day_slider_max'])  # Forecast up to n days
+
             # Create proper time coordinates for forecast period
-            forecast_times = [reference_date + timedelta(days=i) for i in range(5)]
+            forecast_times = [reference_date + timedelta(days=i) for i in range(forecast_horizon)]
             forecast_times_set = set(forecast_times)  # Convert to set for efficient lookup
 
-            # Take first 5 time steps and assign proper time coordinates
+            # Take first forecast_horizon time steps and assign proper time coordinates
             forecast_data = (processed_data
-                            .isel(time=slice(0, 5))
+                            .isel(time=slice(0, forecast_horizon))
                             .assign_coords(time=forecast_times))
             self.logger.debug(f"Forecast data shape: {forecast_data[var_name].shape}")
 

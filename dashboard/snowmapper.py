@@ -38,6 +38,8 @@ import hvplot.pandas
 from bokeh.models.tickers import FixedTicker
 import pyproj
 
+import gettext
+
 from utils.logging import LoggerSetup
 from utils.config import ConfigLoader
 from utils.data_warning import DataFreshnessManager
@@ -84,6 +86,20 @@ config = config_loader.load_config(env)
 # Setup logging
 logger_setup = LoggerSetup(config)
 logger = logger_setup.setup()
+
+# Set up translations
+lang = config['dashboard']['default_language']
+locale_dir = project_root / 'locales'
+print(f"Locale dir: {locale_dir}")
+loc = gettext.translation('snowmapper', locale_dir, languages=[lang])
+print(f"Current language: {lang}")
+_ = loc.gettext
+
+# xgettext -o locales/messages.pot dashboard/snowmapper.py
+# msginit -i locales/messages.pot -o locales/en/LC_MESSAGES/snowmapper.po -l en
+# msginit -i locales/messages.pot -o locales/ru/LC_MESSAGES/snowmapper.po -l ru
+# msgfmt -o locales/ru/LC_MESSAGES/snowmapper.mo locales/ru/LC_MESSAGES/snowmapper.po
+# msgfmt -o locales/en/LC_MESSAGES/snowmapper.mo locales/en/LC_MESSAGES/snowmapper.po
 
 # Color settings
 # Set color map for filled contours
@@ -596,8 +612,8 @@ class SnowMapViewer:
 
 class SnowMapDashboard(param.Parameterized):
     DATA_TYPE_MAPPING = {
-        'time_series': 'Snow situation',  # key is internal value, value is translation key
-        'accumulated': 'New snow'
+        'time_series': 'Снежная обстановка',  # 'Snow situation',  # key is internal value, value is translation key
+        'accumulated': 'Свежий снег'  # 'New snow'
     }
     variable = param.Selector()
     data_type = param.Selector()
@@ -644,6 +660,7 @@ class SnowMapDashboard(param.Parameterized):
         date = dashboard.reference_date + timedelta(days=offset)
         return date.strftime("%a")
 
+    @param.depends('data_type')
     def _update_time_bounds(self):
         """Update time slider bounds based on data availability."""
         if self.variable == 'None':
@@ -685,6 +702,7 @@ class SnowMapDashboard(param.Parameterized):
 
         if days_available:
             # If data_type is 'time_series', do the below to get the min and max days
+            self.logger.debug(f"\n\n\nData type: {self.data_type}")
             if self.data_type == 'time_series':
                 min_days = max(self.config['dashboard']['day_slider_min'], min(days_available))
                 max_days = min(self.config['dashboard']['day_slider_max'], max(days_available))
@@ -704,8 +722,9 @@ class SnowMapDashboard(param.Parameterized):
                 else:
                     self.param.time_offset.bounds = (min_days, max(days_available))
                     self.time_offset = min_days
+            self.logger.debug(f"Time offset bounds: {self.param.time_offset.bounds}")
+            self.logger.debug(f"Time offset: {self.time_offset}")
 
-    @param.depends('variable', 'data_type')
     def update_time_options(self):
         """Update time options when variable or data type changes."""
         if self.variable != 'None':
@@ -757,7 +776,7 @@ dashboard = SnowMapDashboard(
 
 # Create variable selector
 variable_selector = pn.widgets.Select(
-    name='Variable',
+    name=_('Variable'),
     options={
         dashboard.get_variable_label(var): var
         for var in dashboard.param.variable.objects
@@ -767,7 +786,7 @@ variable_selector = pn.widgets.Select(
 
 # Create data type selector
 data_type_selector = pn.widgets.Select(
-    name = 'Data Type',
+    name = _('Data Type'),
     options={
         dashboard.get_data_type_label(data_type): data_type
         for data_type in dashboard.param.data_type.objects
@@ -779,7 +798,7 @@ print(f"Data type selector options: {data_type_selector.options}")
 
 # Create time slider
 time_slider = pn.widgets.IntSlider(
-    name=f'Day Offset from {dashboard.reference_date.strftime("%Y-%m-%d")}',
+    name=f'Смещение дней от {dashboard.reference_date.strftime("%Y-%m-%d")}',  # Day Offset from
     value=dashboard.time_offset,
     start=dashboard.param.time_offset.bounds[0],
     end=dashboard.param.time_offset.bounds[1],
@@ -788,13 +807,13 @@ time_slider = pn.widgets.IntSlider(
 
 # Create map controls
 basemap_selector = pn.widgets.RadioButtonGroup(
-    name='Base Map',
+    name=_('Base Map'),
     options=list(SnowMapViewer.TILE_SOURCES.keys()),
     value='CartoDB Positron'
 )
 
 opacity_slider = pn.widgets.FloatSlider(
-    name='Layer Opacity',
+    name=_('Layer Opacity'),
     value=0.7,
     start=0.1,
     end=1.0,
@@ -803,6 +822,7 @@ opacity_slider = pn.widgets.FloatSlider(
 
 # Link controls
 variable_selector.link(dashboard, value='variable')
+data_type_selector.link(dashboard, value='data_type')
 basemap_selector.link(dashboard, value='basemap')
 opacity_slider.link(dashboard, value='opacity')
 time_slider.link(dashboard, value='time_offset')
@@ -810,16 +830,16 @@ time_slider.link(dashboard, value='time_offset')
 # Create dynamic control panel
 def get_control_panel(variable):
     base_controls = pn.Column(
-        pn.pane.Markdown("### Map Controls"),
+        pn.pane.Markdown(_("### Map Controls")),
         variable_selector,
-        pn.pane.Markdown("Select base map", margin=(0, 0, -10, 10)), #(top, right, bottom, left)
+        pn.pane.Markdown(_("Select base map"), margin=(0, 0, -10, 10)), #(top, right, bottom, left)
         basemap_selector,
     )
 
     if variable != 'None':
         return pn.Column(
             base_controls,
-            pn.pane.Markdown("### Variable Controls"),
+            pn.pane.Markdown(_("### Variable Controls")),
             data_type_selector,
             time_slider,
             opacity_slider
@@ -831,7 +851,7 @@ controls = pn.bind(get_control_panel, dashboard.param.variable)
 
 # Initialize template
 template = pn.template.BootstrapTemplate(
-    title="Snow Situation Tajikistan",
+    title=_("Snow Situation Tajikistan"),
     logo=config['paths']['favicon_path'],
     sidebar_width=350,
     header_background="#2B547E",  # Dark blue header
@@ -903,16 +923,18 @@ header = pn.pane.Markdown(
 
 # Create info content
 info_content = pn.Column(
-    pn.pane.Markdown("""
+    pn.pane.Markdown(_("""
     ### About this Dashboard
     This dashboard shows the snow situation in Tajikistan.
     Data is updated daily and includes:
     - Snow Height (HS) in meters
     - Snow Water Equivalent (SWE) in millimeters
-    - Snow melt (SM) in millimeters
+
+    To view daily accumulated forecasts of new snow, select the 'New snow' data type.
+    To view the simulated snow situation (past and forecast), select the 'Snow situation' data type.
 
     [Close]
-    """),
+    """)),
     width=400,
     css_classes=['floating-info', 'p-3'],
     visible=False
