@@ -863,6 +863,79 @@ template.sidebar.append(
     controls,
 )
 
+# Add spacer to push logos to bottom
+template.sidebar.append(pn.Spacer(height=40))
+
+'''# Create logo container
+logo_container = pn.Column(
+    sizing_mode='stretch_width',
+    margin=(0, 10, 10, 10),  # top, right, bottom, left
+)
+
+# Add each logo from the static/logos directory
+logo_dir = config['paths']['favicon_path']
+# Discard the filename from the logo_dir and append logos
+logo_dir = Path(logo_dir).parent
+logo_dir = Path(logo_dir).joinpath('logos')
+print(f"Logo directory: {logo_dir}")
+if logo_dir.exists():
+    print(f"Logo directory exists")
+    for logo_file in sorted(logo_dir.glob('*')):  # This will sort by filename
+        print(f"Logo file: {logo_file}")
+        if logo_file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.svg']:
+            print(f"Adding logo: {logo_file}")
+            logo_container.append(
+                pn.pane.Image(
+                    str(logo_file),
+                    height=30,  # Adjust height as needed
+                    sizing_mode='fixed',
+                    margin=(0, 0, 10, 0),  # Space between logos
+                    align='start'
+                )
+            )
+
+# Add logo container to sidebar
+template.sidebar.append(logo_container)'''
+
+# Create logo grid with flexbox layout
+logo_grid = pn.FlexBox(
+    sizing_mode='stretch_width',
+    align='center',
+    margin=(0, 10, 10, 10),  # top, right, bottom, left
+    styles={
+        'display': 'flex',
+        'flex-wrap': 'wrap',
+        'gap': '10px',
+        'justify-content': 'center'
+    }
+)
+
+# Add each logo from the static/logos directory
+logo_dir = config['paths']['favicon_path']
+# Discard the filename from the logo_dir and append logos
+logo_dir = Path(logo_dir).parent
+logo_dir = Path(logo_dir).joinpath('logos')
+if logo_dir.exists():
+    for logo_file in sorted(logo_dir.glob('*')):
+        if logo_file.suffix.lower() in ['.png', '.jpg', '.jpeg', 'svg']:
+            logo_grid.append(
+                pn.pane.Image(
+                    str(logo_file),
+                    height=40,  # Smaller height since they're side by side
+                    width=None,  # Auto width to maintain aspect ratio
+                    sizing_mode='fixed',
+                    align='start',
+                    styles={
+                        'min-width': '60px',  # Minimum width for each logo
+                        #'max-width': '120px',  # Maximum width for each logo
+                        'object-fit': 'contain'
+                    }
+                )
+            )
+
+# Add logo grid to sidebar
+template.sidebar.append(logo_grid)
+
 # Add custom CSS for maximizing map space
 template.config.raw_css.append("""
 .bk-root {
