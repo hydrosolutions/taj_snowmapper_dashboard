@@ -79,16 +79,16 @@ variables:
     color_levels: [0.001, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
     min_value: 0
     max_value: 200
-  rof:
-    name: "runoff"
-    figure_title: "Snowmelt"
-    file_prefix: "ROF"
-    widget_short_name: "SM"
-    units: "mm"
-    colormap: "YlOrRd"
-    color_levels: [0.001, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
-    min_value: 0
-    max_value: 4
+  #rof:
+  #  name: "runoff"
+  #  figure_title: "Snowmelt"
+  #  file_prefix: "ROF"
+  #  widget_short_name: "SM"
+  #  units: "mm"
+  #  colormap: "YlOrRd"
+  #  color_levels: [0.001, 30, 60, 90, 150, 300, 500, 700, 1000]  # in mm
+  #  min_value: 0
+  #  max_value: 4
 
 # Dashboard settings
 dashboard:

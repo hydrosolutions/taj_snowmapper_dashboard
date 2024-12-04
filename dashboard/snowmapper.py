@@ -314,7 +314,7 @@ class SnowMapViewer:
         """
         return {
             level: (
-                f'{level:.3f}' if level < small_threshold
+                f'{int(level)}' if level < small_threshold
                 else f'{level:.1f}' if level < 10
                 else f'{int(level)}'
             )
@@ -399,6 +399,9 @@ class SnowMapViewer:
         # Create a list of colors that is one item shorter than levels
         # as we need n-1 colors for n levels
         levels = var_config['color_levels']
+        levels_show = levels
+        if levels_show[0] <= 0.005:
+            levels_show[0] = 0.0
 
         # If using a named colormap, create discrete colors
         colors = self.create_custom_colormap(var_config, len(levels))
@@ -423,7 +426,7 @@ class SnowMapViewer:
             color_levels=levels,  # Explicitly set the levels
             colorbar_opts={
                 'ticker': FixedTicker(ticks=levels),
-                'major_label_overrides': self.create_label_overrides(levels),
+                'major_label_overrides': self.create_label_overrides(levels_show),
                 'title': f"{var_config['figure_title']} ({var_config['units']})"
             },
             colorbar_position='top',
@@ -592,8 +595,12 @@ class SnowMapViewer:
 
 
 class SnowMapDashboard(param.Parameterized):
+    DATA_TYPE_MAPPING = {
+        'time_series': 'Snow situation',  # key is internal value, value is translation key
+        'accumulated': 'New snow'
+    }
     variable = param.Selector()
-    data_type = param.Selector(objects=['time_series', 'accumulated'])
+    data_type = param.Selector()
     time_offset = param.Integer(default=0, bounds=(config['dashboard']['day_slider_min'], config['dashboard']['day_slider_max']))  # Slider for relative days
     basemap = param.Selector(default='CartoDB Positron', objects=[
         #'OpenStreetMap',
@@ -616,20 +623,17 @@ class SnowMapDashboard(param.Parameterized):
         self.data_freshness_manager = DataFreshnessManager()
 
         # Set up variable selector with None option
-        variables = ['None'] + list(config['variables'].keys())
+        #variables = ['None'] + list(config['variables'].keys())
+        variables = list(config['variables'].keys())
         self.param.variable.objects = variables
-        params['variable'] = variables[1]  # Start with 'None' selected
+        params['variable'] = variables[0]  # Start with 'None' selected
 
         super().__init__(**params)
 
         # Initialize viewer
         self.viewer = SnowMapViewer(data_dir, config)
-        self.data_type = 'time_series'
-
-        # Set up variable selector with None option
-        variables = ['None'] + list(config['variables'].keys())
-        self.param.variable.objects = variables
-        params['variable'] = variables[0]  # Start with 'None' selected
+        self.data_type = 'accumulated'
+        self.param.data_type.objects = list(self.DATA_TYPE_MAPPING.keys())
 
         # Initialize time handling
         self.reference_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -721,6 +725,13 @@ class SnowMapDashboard(param.Parameterized):
                 self.opacity
             )
 
+    def get_data_type_label(self, data_type: str) -> str:
+        """Get translated data type label."""
+        print(f"\n\nData type: {data_type}")
+        print(f"Data type mapping: {self.DATA_TYPE_MAPPING}")
+        print(f"Data type label: {self.DATA_TYPE_MAPPING[data_type]}")
+        return self.DATA_TYPE_MAPPING[data_type]
+
     def get_variable_label(self, var_name: str) -> str:
         """Get formatted variable label from config."""
         if var_name == 'None':
@@ -744,6 +755,18 @@ variable_selector = pn.widgets.Select(
     },
     value=dashboard.variable
 )
+
+# Create data type selector
+data_type_selector = pn.widgets.Select(
+    name = 'Data Type',
+    options={
+        dashboard.get_data_type_label(data_type): data_type
+        for data_type in dashboard.param.data_type.objects
+    },
+    value = dashboard.data_type
+)
+print(f"Variable selector options: {variable_selector.options}")
+print(f"Data type selector options: {data_type_selector.options}")
 
 # Create time slider
 time_slider = pn.widgets.IntSlider(
@@ -788,7 +811,7 @@ def get_control_panel(variable):
         return pn.Column(
             base_controls,
             pn.pane.Markdown("### Variable Controls"),
-            dashboard.param.data_type,
+            data_type_selector,
             time_slider,
             opacity_slider
         )
