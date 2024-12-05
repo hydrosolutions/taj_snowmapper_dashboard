@@ -27,7 +27,7 @@ fi
 if [ "$(docker images -q mabesa/taj-snowmapper-backend:latest)" ]; then
     echo "[$TIMESTAMP] Using existing image" >> $PROJECT_DIR/logs/processor.log
 else
-    echo "[$TIMESTAMP] Building image" >> $PROJECT_DIR/logs/processor.log
+    echo "[$TIMESTAMP] Pulling image" >> $PROJECT_DIR/logs/processor.log
     docker pull mabesa/taj-snowmapper-backend:latest 2>> $PROJECT_DIR/logs/processor.log
 fi
 
