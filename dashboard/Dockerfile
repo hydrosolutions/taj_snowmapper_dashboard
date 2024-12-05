@@ -103,5 +103,5 @@ EXPOSE ${PORT}
 
 # Run the panel server
 CMD ["sh", "-c", "DASHBOARD_ENV=aws panel serve /app/dashboard/snowmapper.py --port $PORT --allow-websocket-origin=taj.snowmapper.ch --address 0.0.0.0"]
-#CMD panel serve /app/dashboard/snowmapper.py --port ${PORT}
-
+# Comment line above and uncomment line below if you want to test the dashboard without the websocket origin restriction
+#CMD ["sh", "-c", "DASHBOARD_ENV=aws panel serve /app/dashboard/snowmapper.py --port $PORT --allow-websocket-origin=<IP-Address of your server> --address 0.0.0.0"]
