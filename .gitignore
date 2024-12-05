@@ -24,3 +24,5 @@ data/
 helpers/
 *.ipynb
 dashboard/Dockerfile copy 2
+/static/logos/Z
+*.pptx

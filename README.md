@@ -15,7 +15,7 @@ The web interface is a web application that displays the snow-related data on a 
 ## Instructions
 ### Requirements
 - Ubuntu 20.04 LTS
-- Storage: 50 GB
+- Storage: 24 GB
 - Memory: 8 GB
 - Docker engine (Docker version 27.1.2 or higher) [Installation instructions](https://docs.docker.com/engine/install/ubuntu/)
 - git (git version 243 or higher) (Installation: `sudo apt-get install git`)
@@ -78,14 +78,14 @@ Define regular cron jobs
 crontab -e
 ```
 
-Add the following line to the crontab file to periodically run the data processor at 1:00 UTC
+Add the following line to the crontab file to periodically run the data processor at 21:09 UTC time which is around 2 o'clock in the moring in Dushanbe.
 ```bash
-1 0 * * * bash ~/taj_snowmapper_dashboard/run_data_processor.sh >> ~/taj_snowmapper_dashboard/logs/crontab_processor.log 2>&1
+9 21 * * * bash ~/taj_snowmapper_dashboard/run_data_processor.sh >> ~/taj_snowmapper_dashboard/logs/crontab_processor.log 2>&1
 ```
 
 And add the following line to the crontab file to periodically restart the web interface at 2:00 UTC
 ```bash
-1 1 * * * docker restart taj-snowmapper-dashboard >> ~/taj_snowmapper_dashboard/logs/crontab_dashboard.log 2>&1
+9 22 * * * docker restart taj-snowmapper-dashboard >> ~/taj_snowmapper_dashboard/logs/crontab_dashboard.log 2>&1
 ```
 
 

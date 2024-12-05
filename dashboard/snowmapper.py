@@ -864,7 +864,7 @@ template.sidebar.append(
 )
 
 # Add spacer to push logos to bottom
-template.sidebar.append(pn.Spacer(height=40))
+template.sidebar.append(pn.Spacer(height=80))
 
 '''# Create logo container
 logo_container = pn.Column(
@@ -900,13 +900,13 @@ template.sidebar.append(logo_container)'''
 # Create logo grid with flexbox layout
 logo_grid = pn.FlexBox(
     sizing_mode='stretch_width',
-    align='center',
+    align='start',
     margin=(0, 10, 10, 10),  # top, right, bottom, left
     styles={
         'display': 'flex',
         'flex-wrap': 'wrap',
         'gap': '10px',
-        'justify-content': 'center'
+        'justify-content': 'flex-start'  # 'center'
     }
 )
 
@@ -921,14 +921,15 @@ if logo_dir.exists():
             logo_grid.append(
                 pn.pane.Image(
                     str(logo_file),
-                    height=40,  # Smaller height since they're side by side
+                    height=240,  # Smaller height since they're side by side
                     width=None,  # Auto width to maintain aspect ratio
                     sizing_mode='fixed',
                     align='start',
                     styles={
-                        'min-width': '60px',  # Minimum width for each logo
+                        #'min-width': '60px',  # Minimum width for each logo
                         #'max-width': '120px',  # Maximum width for each logo
-                        'object-fit': 'contain'
+                        'object-fit': 'contain',
+                        'margin-left': '10px'
                     }
                 )
             )
