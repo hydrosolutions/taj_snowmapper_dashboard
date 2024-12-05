@@ -26,3 +26,4 @@ helpers/
 dashboard/Dockerfile copy 2
 /static/logos/Z
 *.pptx
+locales/ru/LC_MESSAGES/snowmapper copy.po

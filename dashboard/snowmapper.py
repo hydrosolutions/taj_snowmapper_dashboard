@@ -798,7 +798,7 @@ print(f"Data type selector options: {data_type_selector.options}")
 
 # Create time slider
 time_slider = pn.widgets.IntSlider(
-    name=f'Смещение дней от {dashboard.reference_date.strftime("%Y-%m-%d")}',  # Day Offset from
+    name=f'Смещение по дням от {dashboard.reference_date.strftime("%Y-%m-%d")}',  # Day Offset from
     value=dashboard.time_offset,
     start=dashboard.param.time_offset.bounds[0],
     end=dashboard.param.time_offset.bounds[1],

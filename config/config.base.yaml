@@ -71,7 +71,7 @@ variables:
     max_value: 10
   swe:
     name: "snow_water_equivalent"
-    figure_title: "Снегозапас"  # "Snow Water Equivalent"
+    figure_title: "Снегозапасы"  # "Snow Water Equivalent"
     file_prefix: "SWE"
     widget_short_name: "SWE"
     units: "мм"  # "mm"
