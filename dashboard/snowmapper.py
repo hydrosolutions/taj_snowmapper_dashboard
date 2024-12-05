@@ -38,6 +38,8 @@ import hvplot.pandas
 from bokeh.models.tickers import FixedTicker
 import pyproj
 
+import gettext
+
 from utils.logging import LoggerSetup
 from utils.config import ConfigLoader
 from utils.data_warning import DataFreshnessManager
@@ -84,6 +86,20 @@ config = config_loader.load_config(env)
 # Setup logging
 logger_setup = LoggerSetup(config)
 logger = logger_setup.setup()
+
+# Set up translations
+lang = config['dashboard']['default_language']
+locale_dir = project_root / 'locales'
+print(f"Locale dir: {locale_dir}")
+loc = gettext.translation('snowmapper', locale_dir, languages=[lang])
+print(f"Current language: {lang}")
+_ = loc.gettext
+
+# xgettext -o locales/messages.pot dashboard/snowmapper.py
+# msginit -i locales/messages.pot -o locales/en/LC_MESSAGES/snowmapper.po -l en
+# msginit -i locales/messages.pot -o locales/ru/LC_MESSAGES/snowmapper.po -l ru
+# msgfmt -o locales/ru/LC_MESSAGES/snowmapper.mo locales/ru/LC_MESSAGES/snowmapper.po
+# msgfmt -o locales/en/LC_MESSAGES/snowmapper.mo locales/en/LC_MESSAGES/snowmapper.po
 
 # Color settings
 # Set color map for filled contours
@@ -314,7 +330,7 @@ class SnowMapViewer:
         """
         return {
             level: (
-                f'{level:.3f}' if level < small_threshold
+                f'{int(level)}' if level < small_threshold
                 else f'{level:.1f}' if level < 10
                 else f'{int(level)}'
             )
@@ -399,6 +415,9 @@ class SnowMapViewer:
         # Create a list of colors that is one item shorter than levels
         # as we need n-1 colors for n levels
         levels = var_config['color_levels']
+        levels_show = levels
+        if levels_show[0] <= 0.005:
+            levels_show[0] = 0.0
 
         # If using a named colormap, create discrete colors
         colors = self.create_custom_colormap(var_config, len(levels))
@@ -423,7 +442,7 @@ class SnowMapViewer:
             color_levels=levels,  # Explicitly set the levels
             colorbar_opts={
                 'ticker': FixedTicker(ticks=levels),
-                'major_label_overrides': self.create_label_overrides(levels),
+                'major_label_overrides': self.create_label_overrides(levels_show),
                 'title': f"{var_config['figure_title']} ({var_config['units']})"
             },
             colorbar_position='top',
@@ -592,8 +611,12 @@ class SnowMapViewer:
 
 
 class SnowMapDashboard(param.Parameterized):
+    DATA_TYPE_MAPPING = {
+        'time_series': 'Снежная обстановка',  # 'Snow situation',  # key is internal value, value is translation key
+        'accumulated': 'Свежий снег'  # 'New snow'
+    }
     variable = param.Selector()
-    data_type = param.Selector(objects=['time_series', 'accumulated'])
+    data_type = param.Selector()
     time_offset = param.Integer(default=0, bounds=(config['dashboard']['day_slider_min'], config['dashboard']['day_slider_max']))  # Slider for relative days
     basemap = param.Selector(default='CartoDB Positron', objects=[
         #'OpenStreetMap',
@@ -616,20 +639,17 @@ class SnowMapDashboard(param.Parameterized):
         self.data_freshness_manager = DataFreshnessManager()
 
         # Set up variable selector with None option
-        variables = ['None'] + list(config['variables'].keys())
+        #variables = ['None'] + list(config['variables'].keys())
+        variables = list(config['variables'].keys())
         self.param.variable.objects = variables
-        params['variable'] = variables[1]  # Start with 'None' selected
+        params['variable'] = variables[0]  # Start with 'None' selected
 
         super().__init__(**params)
 
         # Initialize viewer
         self.viewer = SnowMapViewer(data_dir, config)
-        self.data_type = 'time_series'
-
-        # Set up variable selector with None option
-        variables = ['None'] + list(config['variables'].keys())
-        self.param.variable.objects = variables
-        params['variable'] = variables[0]  # Start with 'None' selected
+        self.data_type = 'accumulated'
+        self.param.data_type.objects = list(self.DATA_TYPE_MAPPING.keys())
 
         # Initialize time handling
         self.reference_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -640,6 +660,7 @@ class SnowMapDashboard(param.Parameterized):
         date = dashboard.reference_date + timedelta(days=offset)
         return date.strftime("%a")
 
+    @param.depends('data_type')
     def _update_time_bounds(self):
         """Update time slider bounds based on data availability."""
         if self.variable == 'None':
@@ -680,19 +701,30 @@ class SnowMapDashboard(param.Parameterized):
             return
 
         if days_available:
-            min_days = max(self.config['dashboard']['day_slider_min'], min(days_available))
-            max_days = min(self.config['dashboard']['day_slider_max'], max(days_available))
+            # If data_type is 'time_series', do the below to get the min and max days
+            self.logger.debug(f"\n\n\nData type: {self.data_type}")
+            if self.data_type == 'time_series':
+                min_days = max(self.config['dashboard']['day_slider_min'], min(days_available))
+                max_days = min(self.config['dashboard']['day_slider_max'], max(days_available))
 
-            # Update slider bounds
-            self.param.time_offset.bounds = (min_days, max_days)
+                # Update slider bounds
+                self.param.time_offset.bounds = (min_days, max_days)
 
-            # Set default to 0 (today) if available, otherwise earliest available day
-            if 0 in days_available:
-                self.time_offset = 0
+                # Set default to 0 (today) if available, otherwise earliest available day
+                if 0 in days_available:
+                    self.time_offset = 0
+                else:
+                    self.time_offset = min_days
             else:
-                self.time_offset = min_days
+                if 1 in days_available:
+                    self.param.time_offset.bounds = (1, max(days_available))
+                    self.time_offset = 1
+                else:
+                    self.param.time_offset.bounds = (min_days, max(days_available))
+                    self.time_offset = min_days
+            self.logger.debug(f"Time offset bounds: {self.param.time_offset.bounds}")
+            self.logger.debug(f"Time offset: {self.time_offset}")
 
-    @param.depends('variable', 'data_type')
     def update_time_options(self):
         """Update time options when variable or data type changes."""
         if self.variable != 'None':
@@ -721,6 +753,13 @@ class SnowMapDashboard(param.Parameterized):
                 self.opacity
             )
 
+    def get_data_type_label(self, data_type: str) -> str:
+        """Get translated data type label."""
+        print(f"\n\nData type: {data_type}")
+        print(f"Data type mapping: {self.DATA_TYPE_MAPPING}")
+        print(f"Data type label: {self.DATA_TYPE_MAPPING[data_type]}")
+        return self.DATA_TYPE_MAPPING[data_type]
+
     def get_variable_label(self, var_name: str) -> str:
         """Get formatted variable label from config."""
         if var_name == 'None':
@@ -737,7 +776,7 @@ dashboard = SnowMapDashboard(
 
 # Create variable selector
 variable_selector = pn.widgets.Select(
-    name='Variable',
+    name=_('Variable'),
     options={
         dashboard.get_variable_label(var): var
         for var in dashboard.param.variable.objects
@@ -745,9 +784,21 @@ variable_selector = pn.widgets.Select(
     value=dashboard.variable
 )
 
+# Create data type selector
+data_type_selector = pn.widgets.Select(
+    name = _('Data Type'),
+    options={
+        dashboard.get_data_type_label(data_type): data_type
+        for data_type in dashboard.param.data_type.objects
+    },
+    value = dashboard.data_type
+)
+print(f"Variable selector options: {variable_selector.options}")
+print(f"Data type selector options: {data_type_selector.options}")
+
 # Create time slider
 time_slider = pn.widgets.IntSlider(
-    name=f'Day Offset from {dashboard.reference_date.strftime("%Y-%m-%d")}',
+    name=f'Смещение дней от {dashboard.reference_date.strftime("%Y-%m-%d")}',  # Day Offset from
     value=dashboard.time_offset,
     start=dashboard.param.time_offset.bounds[0],
     end=dashboard.param.time_offset.bounds[1],
@@ -756,13 +807,13 @@ time_slider = pn.widgets.IntSlider(
 
 # Create map controls
 basemap_selector = pn.widgets.RadioButtonGroup(
-    name='Base Map',
+    name=_('Base Map'),
     options=list(SnowMapViewer.TILE_SOURCES.keys()),
     value='CartoDB Positron'
 )
 
 opacity_slider = pn.widgets.FloatSlider(
-    name='Layer Opacity',
+    name=_('Layer Opacity'),
     value=0.7,
     start=0.1,
     end=1.0,
@@ -771,6 +822,7 @@ opacity_slider = pn.widgets.FloatSlider(
 
 # Link controls
 variable_selector.link(dashboard, value='variable')
+data_type_selector.link(dashboard, value='data_type')
 basemap_selector.link(dashboard, value='basemap')
 opacity_slider.link(dashboard, value='opacity')
 time_slider.link(dashboard, value='time_offset')
@@ -778,17 +830,17 @@ time_slider.link(dashboard, value='time_offset')
 # Create dynamic control panel
 def get_control_panel(variable):
     base_controls = pn.Column(
-        pn.pane.Markdown("### Map Controls"),
+        pn.pane.Markdown(_("### Map Controls")),
         variable_selector,
-        pn.pane.Markdown("Select base map", margin=(0, 0, -10, 10)), #(top, right, bottom, left)
+        pn.pane.Markdown(_("Select base map"), margin=(0, 0, -10, 10)), #(top, right, bottom, left)
         basemap_selector,
     )
 
     if variable != 'None':
         return pn.Column(
             base_controls,
-            pn.pane.Markdown("### Variable Controls"),
-            dashboard.param.data_type,
+            pn.pane.Markdown(_("### Variable Controls")),
+            data_type_selector,
             time_slider,
             opacity_slider
         )
@@ -799,7 +851,7 @@ controls = pn.bind(get_control_panel, dashboard.param.variable)
 
 # Initialize template
 template = pn.template.BootstrapTemplate(
-    title="Snow Situation Tajikistan",
+    title=_("Snow Situation Tajikistan"),
     logo=config['paths']['favicon_path'],
     sidebar_width=350,
     header_background="#2B547E",  # Dark blue header
@@ -810,6 +862,79 @@ template = pn.template.BootstrapTemplate(
 template.sidebar.append(
     controls,
 )
+
+# Add spacer to push logos to bottom
+template.sidebar.append(pn.Spacer(height=40))
+
+'''# Create logo container
+logo_container = pn.Column(
+    sizing_mode='stretch_width',
+    margin=(0, 10, 10, 10),  # top, right, bottom, left
+)
+
+# Add each logo from the static/logos directory
+logo_dir = config['paths']['favicon_path']
+# Discard the filename from the logo_dir and append logos
+logo_dir = Path(logo_dir).parent
+logo_dir = Path(logo_dir).joinpath('logos')
+print(f"Logo directory: {logo_dir}")
+if logo_dir.exists():
+    print(f"Logo directory exists")
+    for logo_file in sorted(logo_dir.glob('*')):  # This will sort by filename
+        print(f"Logo file: {logo_file}")
+        if logo_file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.svg']:
+            print(f"Adding logo: {logo_file}")
+            logo_container.append(
+                pn.pane.Image(
+                    str(logo_file),
+                    height=30,  # Adjust height as needed
+                    sizing_mode='fixed',
+                    margin=(0, 0, 10, 0),  # Space between logos
+                    align='start'
+                )
+            )
+
+# Add logo container to sidebar
+template.sidebar.append(logo_container)'''
+
+# Create logo grid with flexbox layout
+logo_grid = pn.FlexBox(
+    sizing_mode='stretch_width',
+    align='center',
+    margin=(0, 10, 10, 10),  # top, right, bottom, left
+    styles={
+        'display': 'flex',
+        'flex-wrap': 'wrap',
+        'gap': '10px',
+        'justify-content': 'center'
+    }
+)
+
+# Add each logo from the static/logos directory
+logo_dir = config['paths']['favicon_path']
+# Discard the filename from the logo_dir and append logos
+logo_dir = Path(logo_dir).parent
+logo_dir = Path(logo_dir).joinpath('logos')
+if logo_dir.exists():
+    for logo_file in sorted(logo_dir.glob('*')):
+        if logo_file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.svg']:
+            logo_grid.append(
+                pn.pane.Image(
+                    str(logo_file),
+                    height=40,  # Smaller height since they're side by side
+                    width=None,  # Auto width to maintain aspect ratio
+                    sizing_mode='fixed',
+                    align='start',
+                    styles={
+                        'min-width': '60px',  # Minimum width for each logo
+                        #'max-width': '120px',  # Maximum width for each logo
+                        'object-fit': 'contain'
+                    }
+                )
+            )
+
+# Add logo grid to sidebar
+template.sidebar.append(logo_grid)
 
 # Add custom CSS for maximizing map space
 template.config.raw_css.append("""
@@ -871,16 +996,18 @@ header = pn.pane.Markdown(
 
 # Create info content
 info_content = pn.Column(
-    pn.pane.Markdown("""
+    pn.pane.Markdown(_("""
     ### About this Dashboard
     This dashboard shows the snow situation in Tajikistan.
     Data is updated daily and includes:
     - Snow Height (HS) in meters
     - Snow Water Equivalent (SWE) in millimeters
-    - Snow melt (SM) in millimeters
+
+    To view daily accumulated forecasts of new snow, select the 'New snow' data type.
+    To view the simulated snow situation (past and forecast), select the 'Snow situation' data type.
 
     [Close]
-    """),
+    """)),
     width=400,
     css_classes=['floating-info', 'p-3'],
     visible=False

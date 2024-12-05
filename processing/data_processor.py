@@ -432,22 +432,39 @@ class SnowDataPipeline:
             processed_data = self._process_single_file(latest_data, var_name)
             self.logger.debug(f"Processed data shape: {processed_data[var_name].shape}")
 
+            # See how many time steps we have
+            num_time_steps = processed_data.sizes['time']
+            forecast_horizon = min(num_time_steps, self.config['dashboard']['day_slider_max'])  # Forecast up to n days
+
             # Create proper time coordinates for forecast period
-            forecast_times = [reference_date + timedelta(days=i) for i in range(5)]
+            forecast_times = [reference_date + timedelta(days=i) for i in range(forecast_horizon)]
             forecast_times_set = set(forecast_times)  # Convert to set for efficient lookup
 
-            # Take first 5 time steps and assign proper time coordinates
+            # Take first forecast_horizon time steps and assign proper time coordinates
             forecast_data = (processed_data
-                            .isel(time=slice(0, 5))
+                            .isel(time=slice(0, forecast_horizon))
                             .assign_coords(time=forecast_times))
             self.logger.debug(f"Forecast data shape: {forecast_data[var_name].shape}")
 
+            forecast_copy = forecast_data.copy(deep=True)
+            self.logger.debug(f"shape of forecast_copy: {forecast_copy[var_name].shape}")
+            # print names of variables
+            self.logger.debug(f"Variable names: {forecast_copy.data_vars}")
+
+            # Take the difference between time steps to get new snowfall
+            forecast_copy[var_name] = forecast_copy[var_name].diff(dim='time', n=1)
+            self.logger.debug(f"shape of forecast_copy: {forecast_copy[var_name].shape}")
+
+            # Only keep values >= 0
+            forecast_copy[var_name] = forecast_copy[var_name].where(forecast_copy[var_name] >= 0)
+
             # Calculate accumulations with same time coordinates
-            accumulated = (forecast_data.cumsum(dim='time')
+            accumulated = forecast_copy.copy(deep=True  )
+            accumulated[var_name] = (accumulated[var_name].cumsum(dim='time')
                           .assign_coords(time=forecast_times))
 
             # Subtract the first time step to get the actual values
-            accumulated = accumulated - accumulated.isel(time=0)
+            #accumulated[var_name] = accumulated[var_name] - accumulated[var_name].isel(time=0)
 
             # Rename variables for forecast and accumulated
             forecast_data = forecast_data.rename({var_name: f"{var_name}_time_series"})
