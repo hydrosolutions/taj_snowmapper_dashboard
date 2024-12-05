@@ -6,7 +6,6 @@ fiona==1.9.5
 GDAL==3.6.2
 geopandas==0.14.2
 geoviews==1.13.0
-gettext
 holoviews==1.20.0
 hvplot==0.11.1
 pandas==2.2.2
