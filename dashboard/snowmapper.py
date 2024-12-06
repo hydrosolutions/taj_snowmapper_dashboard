@@ -341,6 +341,7 @@ class SnowMapViewer:
         """
         Create a custom colormap for specific variables
         """
+        self.logger.debug(f"Creating custom colormap for {var_config['name']}: {var_config['colormap']}")
         if var_config['colormap'] == 'viridis_r':
             # Create a custom reversed viridis-like colormap
             colors = ['#fde724', '#9fd938', '#49c16d', '#1fa187', '#277e8e',
@@ -415,6 +416,7 @@ class SnowMapViewer:
         # Create a list of colors that is one item shorter than levels
         # as we need n-1 colors for n levels
         levels = var_config['color_levels']
+        # Set lowest level to 0 if it's very close to zero for better display
         levels_show = levels
         if levels_show[0] <= 0.005:
             levels_show[0] = 0.0

@@ -96,5 +96,5 @@ dashboard:
   default_language: "ru"
   default_opacity: 0.7
   tile_provider: "OpenStreetMap"
-  day_slider_min: -3  # Number of days to look back from today
-  day_slider_max: 5  # Number of days to look forward from today
+  day_slider_min: -2  # Number of days to look back from today
+  day_slider_max: 3  # Number of days to look forward from today

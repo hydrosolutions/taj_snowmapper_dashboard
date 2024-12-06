@@ -235,6 +235,7 @@ class SnowDataPipeline:
         # Return the clipped dataset
         return ds_clip
 
+    # Deprecating this function
     def generate_contours(self, combined_data: xr.Dataset, var_name: str) -> gpd.GeoDataFrame:
         """
         Generate filled contour polygons for both time series and accumulated data.
