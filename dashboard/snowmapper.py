@@ -120,9 +120,9 @@ class SnowMapViewer:
 
     # Define available tile sources
     TILE_SOURCES = {
+        'Stamen Terrain': gv.tile_sources.StamenTerrain,
         'CartoDB Positron': gv.tile_sources.CartoLight,
         #'OpenStreetMap': gv.tile_sources.OSM,
-        'Stamen Terrain': gv.tile_sources.StamenTerrain,
         'Satellite': gv.tile_sources.EsriImagery
 
     }
@@ -641,7 +641,7 @@ class SnowMapDashboard(param.Parameterized):
     variable = param.Selector()
     data_type = param.Selector()
     time_offset = param.Integer(default=0, bounds=(config['dashboard']['day_slider_min'], config['dashboard']['day_slider_max']))  # Slider for relative days
-    basemap = param.Selector(default='CartoDB Positron', objects=[
+    basemap = param.Selector(default='Stamen Terrain', objects=[
         #'OpenStreetMap',
         'Stamen Terrain',
         'Satellite',
@@ -671,7 +671,7 @@ class SnowMapDashboard(param.Parameterized):
 
         # Initialize viewer
         self.viewer = SnowMapViewer(data_dir, config)
-        self.data_type = 'accumulated'
+        self.data_type = 'time_series'
         self.param.data_type.objects = list(self.DATA_TYPE_MAPPING.keys())
 
         # Initialize time handling
@@ -832,7 +832,7 @@ time_slider = pn.widgets.IntSlider(
 basemap_selector = pn.widgets.RadioButtonGroup(
     name=_('Base Map'),
     options=list(SnowMapViewer.TILE_SOURCES.keys()),
-    value='CartoDB Positron'
+    #value='CartoDB Positron'
 )
 
 opacity_slider = pn.widgets.FloatSlider(
