@@ -123,7 +123,7 @@ class SnowMapViewer:
         'CartoDB Positron': gv.tile_sources.CartoLight,
         #'OpenStreetMap': gv.tile_sources.OSM,
         'Stamen Terrain': gv.tile_sources.StamenTerrain,
-        'Satellite': gv.tile_sources.EsriImagery,
+        'Satellite': gv.tile_sources.EsriImagery
 
     }
 
@@ -244,6 +244,21 @@ class SnowMapViewer:
         try:
             # Get the appropriate tile source
             tile_source = self.TILE_SOURCES.get(basemap, gv.tile_sources.OSM)
+
+            '''if basemap == 'CartoDB Positron':
+                # Create the hillshade layer with reduced opacity
+                # Create hillshade layer using ESRI's REST service
+                hillshade = gv.WMTS('https://services.arcgisonline.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer/tile/{Z}/{Y}/{X}',
+                                    crs=crs.GOOGLE_MERCATOR).opts(
+                    alpha=0.3,
+                    xlabel='',
+                    ylabel='',
+                )
+                tiles = (tile_source() * hillshade).opts(
+                    projection=crs.GOOGLE_MERCATOR,
+                    global_extent=True
+                )
+            else:'''
             tiles = tile_source()
 
             # Set map bounds from config
@@ -360,7 +375,7 @@ class SnowMapViewer:
 
         return colors
 
-    def create_contour_plot(self, raster, var_config, opacity=1.0):
+    def create_contour_plot(self, raster, data_type, var_config, opacity=1.0):
         """
         Create a contour plot using HoloViews with Bokeh backend.
 
@@ -372,6 +387,9 @@ class SnowMapViewer:
             - x coordinates
             - y coordinates
             - values (e.g., snow height data)
+
+        data_type : str
+            Type of data to be plotted, either 'time_series' or 'accumulated'
 
         var_config : dict
             Configuration dictionary containing:
@@ -413,16 +431,19 @@ class SnowMapViewer:
         self.logger.debug(f"Creating contour plot")
         self.logger.debug(f"Raster shape: {raster.shape}")
 
-        # Create a list of colors that is one item shorter than levels
-        # as we need n-1 colors for n levels
-        levels = var_config['color_levels']
+        if data_type == 'time_series':
+            # Create a list of colors that is one item shorter than levels
+            # as we need n-1 colors for n levels
+            levels = var_config['color_levels']
+
+        else:
+            levels = var_config['new_snow_color_levels']
+
         # Set lowest level to 0 if it's very close to zero for better display
+        colors = self.create_custom_colormap(var_config, len(levels))
         levels_show = levels
         if levels_show[0] <= 0.005:
             levels_show[0] = 0.0
-
-        # If using a named colormap, create discrete colors
-        colors = self.create_custom_colormap(var_config, len(levels))
 
         # Create a color mapper for the contours
         from bokeh.models import LinearColorMapper
@@ -440,7 +461,7 @@ class SnowMapViewer:
             filled=True
         ).opts(
             colorbar=True,
-            #cmap=colors,
+            cmap=colors,
             color_levels=levels,  # Explicitly set the levels
             colorbar_opts={
                 'ticker': FixedTicker(ticks=levels),
@@ -460,7 +481,7 @@ class SnowMapViewer:
 
         return contours
 
-    def create_map(self, var_name: str, time_idx: datetime, data_type: str = 'forecast',
+    def create_map(self, var_name: str, time_idx: datetime, data_type: str = 'accumulated',
                    basemap: str = 'CartoDB Positron', opacity: float = 0.7) -> gv.Image:
         """Create a map visualization with variable overlay."""
         self.logger.debug(f"Creating map for {var_name}, {time_idx}, {data_type}, {basemap}, {opacity}")
@@ -589,7 +610,7 @@ class SnowMapViewer:
                            width=325, height=325,))
                            #colorbar_opts={'major_label_overrides': {0.001: '0.001', 0.2: '0.2', 0.5: '0.5', 0.8: '0.8', 1.2: '1.2', 2.0: '2.0', 3.0: '3.0', 4.0: '4.0'}}))
             '''
-            contours = self.create_contour_plot(raster, var_config, opacity)
+            contours = self.create_contour_plot(raster, data_type, var_config, opacity)
 
             # Combine base map with raster
             return (map_view * contours * country_outline).opts(
