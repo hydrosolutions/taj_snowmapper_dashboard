@@ -37,10 +37,15 @@ projections:
 variables:
   - hs
   - swe
-  - rof
+  #- rof
 
 # Configuring the data smoothing and upscaling
 visualization:
+  # Thresholds for the data, neglecting values below these thresholds
+  min_hs_threshold: 0.02  # in m
+  min_swe_threshold: 20  # in mm
+  min_rof_threshold: 20  # in mm
+  # Smoothing & upscaling factor for the data
   enable_optimization: true
   smoothing_factor: 1.0
   upscale_factor: 2.0

@@ -129,8 +129,14 @@ class SnowDataPipeline:
         self.logger.debug(f"Slicing dataset to bounds: {aoi_lat}, {aoi_lon}")
         ds_clip = ds.sel(lat=slice(aoi_lat[0], aoi_lat[1]),
                          lon=slice(aoi_lon[0], aoi_lon[1]))
-        ds_clip = ds
+        ds_clip = ds.copy(deep=True)
         self.logger.debug(f"Dataset shape after slicing: {ds_clip[var_name].shape}")
+
+        # Set values smaller than config[visualization][min_{var_name}_threshold] to 0
+        min_threshold = self.config['visualization'][f"min_{var_name}_threshold"]
+
+        # All values in ds_clip smaller than min_threshold are set to 0
+        ds_clip[var_name] = ds_clip[var_name].where(ds_clip[var_name] >= min_threshold, 0)
 
         # Transform to a suitable projected CRS (UTM zone 42N for Tajikistan)
         mask_projected = self.mask_gdf.to_crs(CRS.from_epsg(32642))
