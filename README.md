@@ -6,6 +6,12 @@ This repository contains the code for the snowmapper tajikistan dashboard, curre
 Below we show a screenshot of the dashboard displaying a forecast of snow heigth:
 ![screenshot](static/Screenshot_tajsnowmapper.png)
 
+## Maintenance Status
+⚪ **Archived**
+
+This software is no longer actively maintained.
+The code remains available for reference and learning purposes.
+
 ## Architecture
 This project comes in 2 components: A data processor and a web interface. The data processor is a python script that downloads the latest snow data from the TopoPyScale and FSM model and, after pre-processing, stores it in local files optimized for display. The web interface is a dashboard that displays the snow-related data on a map. Both components are run in a docker container.
 
