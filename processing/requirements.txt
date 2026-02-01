@@ -21,4 +21,4 @@ seaborn
 shapely==2.0.5
 tqdm
 xarray==2024.10.0
-zarr==2.18.3 
+zarr==2.18.3
